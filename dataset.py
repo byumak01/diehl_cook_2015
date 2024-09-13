@@ -1,0 +1,58 @@
+"""
+This script loads the MNIST dataset and converts pixel intensities 
+into rate-encoded inputs, which are used for simulation.
+
+Original author: Ege Demir, 2024
+
+Modifications made by: Barış Yumak, 2024
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import struct
+
+def get_spiking_rates_and_labels(dataset_path: str = "mnist/"):
+    # Load training data
+    train_image_intensities = _load_images(dataset_path + 'train-images.idx3-ubyte')
+    train_image_labels = _load_labels(dataset_path + 'train-labels.idx1-ubyte')
+
+    # Load test data
+    test_image_intensities = _load_images(dataset_path + 't10k-images.idx3-ubyte')
+    test_image_labels = _load_labels(dataset_path + 't10k-labels.idx1-ubyte')
+
+    # Convert 2d indices to 1d
+    test_image_intensities = _convert_indices_to_1d(train_image_intensities)
+    test_image_labels = _convert_indices_to_1d(test_image_intensities)
+
+    # Get spiking rates of images
+    train_image_rates = _convert_to_spiking_rates(test_image_intensities)
+    test_image_rates = _convert_to_spiking_rates(test_image_labels)
+    
+    return train_image_rates, train_image_labels, test_image_rates, test_image_labels
+
+def _load_images(filename: str):
+    with open(filename, 'rb') as f:
+        magic, num, rows, cols = struct.unpack(">IIII", f.read(16))
+        images = np.fromfile(f, dtype=np.uint8).reshape(num, rows, cols)
+    return images
+
+def _load_labels(filename: str):
+    with open(filename, 'rb') as f:
+        magic, num = struct.unpack(">II", f.read(8))
+        labels = np.fromfile(f, dtype=np.uint8)
+    return labels
+
+# Normalizes pixel intensities between 0 and 63.75. Normalized value will
+# be spiking rate (Hz) of the cell.
+def _convert_to_spiking_rates(images):
+    return (images * 63.75) / 255
+
+# Converts indices spiking rates from 2d to 1d, so that it can be used in
+# PoissonGroup object.
+def _convert_indices_to_1d(images):
+    return images.reshape(images.shape[0], -1)
+
+def increase_spiking_rates(image):
+    maximum_rate = max(image)
+    new_maximum_rate = maximum_rate + 32
+    return (image * new_maximum_rate) / maximum_rate

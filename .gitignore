@@ -1,0 +1,4 @@
+__pycache__
+.venv_win
+weight_matrices
+changes.txt
