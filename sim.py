@@ -233,11 +233,11 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
         curr_image_idx += 1
 
 end = time.time()
-print("Simulation time")
+print(f"Simulation time: {end - start}")
 if test_phase:
     predictions_per_image = get_predictions(spike_counts_per_image)
     calculate_accuracy(predictions_per_image, test_image_labels)
 else: # training phase
-    assign_neurons_to_labels(spike_counts_per_image)
+    assign_neurons_to_labels(spike_counts_per_image, train_image_labels, population_exc)
     weights = syn_input_exc.w_ee[:]
     np.save('input_to_exc_trained_weights.npy', weights)

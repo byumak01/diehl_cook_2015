@@ -8,9 +8,12 @@ def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], imag
     for label in range(10):
         # get how many images exist in image_labels for current label.
         current_label_count = len(np.where(image_labels == label)[0])
+        spike_counts_per_image = np.vstack(spike_counts_per_image)
+        
         if current_label_count > 0:
+            print("spike_counts_per_image", spike_counts_per_image)
             # calculate how many times each neuron fired for current label, during simulation.
-            total_spike_counts = sum(spike_counts_per_image[image_labels == label], axis=0)
+            total_spike_counts = np.sum(spike_counts_per_image[image_labels == label], axis=0)
             # calculate average of total_spike_count_per_neuron by dividing it by image count with current label.
             average_spike_counts = total_spike_counts / current_label_count
             for neuron_idx in range(population_exc):
