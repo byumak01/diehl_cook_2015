@@ -11,7 +11,6 @@ def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], imag
         spike_counts_per_image = np.vstack(spike_counts_per_image)
         
         if current_label_count > 0:
-            print("spike_counts_per_image", spike_counts_per_image)
             # calculate how many times each neuron fired for current label, during simulation.
             total_spike_counts = np.sum(spike_counts_per_image[image_labels == label], axis=0)
             # calculate average of total_spike_count_per_neuron by dividing it by image count with current label.
@@ -22,8 +21,7 @@ def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], imag
                     assigned_labels[neuron_idx] = label
     np.save('assignments_from_training.npy', assigned_labels)
 
-def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int]) -> ty.List[int]:
-    assignments_from_training = np.load('assignments_from_training.npy')
+def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int], assignments_from_training: np.ndarray) -> ty.List[int]:
     predictions = []
     for label in range(10):
         # get how many neurons are assigned to current label.
@@ -45,10 +43,11 @@ def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int])
 
     return list(predictions)
 
-def get_predictions(spike_counts_per_image: ty.List[ty.List[int]], assignments_from_training: ty.List[int]) -> ty.List[ty.List[int]]:
+def get_predictions(spike_counts_per_image: ty.List[ty.List[int]]) -> ty.List[ty.List[int]]:
+    assignments_from_training = np.load('assignments_from_training.npy')
     test_image_count = len(spike_counts_per_image)
     predictions_per_image = []
-
+    print("type assignments from training", type(assignments_from_training))
     for image_idx in range(test_image_count):
         predictions_current_image = _get_predictions_for_current_image(spike_counts_per_image[image_idx], assignments_from_training)
         predictions_per_image.append(predictions_current_image)

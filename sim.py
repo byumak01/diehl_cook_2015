@@ -20,7 +20,7 @@ from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_la
 
 start = time.time()
 
-test_phase = False
+test_phase = True
 
 # Parameters (Values taken from GitHub of original code)
 # NeuronGroup Parameters:
@@ -167,7 +167,7 @@ image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to i
 if test_phase:
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test, method="euler")
     syn_input_exc.connect()
-    weights = np.load('weights/input_exc_weights.npy')
+    weights = np.load('input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights # Setting pre-trained weights
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
@@ -200,7 +200,7 @@ else: # training phase
     image_input_rates = training_image_rates
 
 while(curr_image_idx < image_count):  # While loop which will continue until all training data is finished.
-    if curr_image_idx%100 == 0:
+    if curr_image_idx%25 == 0:
         print("----------------------------------")
         print(f"Current image: {curr_image_idx}")
         print(f"Elapsed time:", {time.time() - start})
@@ -208,7 +208,7 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
     run(350 * ms)  # training network for 350 ms.
 
     spike_counts_current_image = spike_mon_ng_exc.count[:]
-
+    
     del spike_mon_ng_exc
     spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 

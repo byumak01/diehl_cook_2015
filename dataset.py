@@ -21,12 +21,12 @@ def get_spiking_rates_and_labels(dataset_path: str = "mnist/"):
     test_image_labels = _load_labels(dataset_path + 't10k-labels.idx1-ubyte')
 
     # Convert 2d indices to 1d
-    test_image_intensities = _convert_indices_to_1d(train_image_intensities)
-    test_image_labels = _convert_indices_to_1d(test_image_intensities)
+    _train_image_intensities = _convert_indices_to_1d(train_image_intensities)
+    _test_image_intensities = _convert_indices_to_1d(test_image_intensities)
 
     # Get spiking rates of images
-    train_image_rates = _convert_to_spiking_rates(test_image_intensities)
-    test_image_rates = _convert_to_spiking_rates(test_image_labels)
+    train_image_rates = _convert_to_spiking_rates(_train_image_intensities)
+    test_image_rates = _convert_to_spiking_rates(_test_image_intensities)
     
     return train_image_rates, train_image_labels, test_image_rates, test_image_labels
 
