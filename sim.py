@@ -20,7 +20,7 @@ from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_la
 
 start = time.time()
 
-test_phase = True
+test_phase = False
 
 # Parameters (Values taken from GitHub of original code)
 # NeuronGroup Parameters:
@@ -58,13 +58,22 @@ w_ei_ = 10.4                                   # Weight between exc. -> inh. syn
 w_ie_ = 17                                     # Weight between inh. -> exc. synapse
 delay_ee = 10 * ms                             # Delay between exc. -> exc. synapse
 
+# PoissonGroup parameters:
+max_rate = 63.75 * Hz                   # Spike intensities are normalized between 0 and max_rate at the beginning.
+
 # NeuronGroup equations for exc. and inh. populations
 ng_eqs_exc = """
 dv/dt = ((E_rest_exc - v) + g_e*(E_exc_for_exc - v) + g_i*(E_inh_for_exc - v))/tau_lif_exc : volt (unless refractory)  # (Eq. 1 in the paper)
 dg_e/dt = -g_e/tau_ge : 1                                                                                              # (Eq. 2 in the paper)
 dg_i/dt = -g_i/tau_gi : 1                                                                                              # (Eq. 2 in the paper (Inhibitory version))
-dtheta/dt = -theta/tau_theta  : volt                                                                                   # Theta is used for adaptive threshold mechanism
 """
+
+# Theta is used for adaptive threshold mechanism. It uses its trained value in test phase.
+# w_sum is used in divisive weight normalization.
+if test_phase:
+    ng_eqs_exc += "theta : volt"
+else:
+    ng_eqs_exc += "dtheta/dt = -theta/tau_theta  : volt"
 
 ng_eqs_inh = """
 dv/dt = ((E_rest_inh - v) + g_e*(E_exc_for_inh - v) + g_i*(E_inh_for_inh - v))/tau_lif_inh : volt (unless refractory)  # (Eq. 1 in the paper (inhibitory version))
@@ -78,9 +87,11 @@ ng_threshold_inh = "v > v_threshold_inh"
 
 # Defining reset equations for exc. and inh. populations
 ng_reset_exc = """
-v = v_reset_exc
-theta += theta_inc_exc 
+v = v_reset_exc 
 """
+
+if not test_phase:
+    ng_reset_exc = "theta += theta_inc_exc"
 
 ng_reset_inh = """
 v = v_reset_inh
@@ -143,7 +154,11 @@ neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_
 neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
 
-neuron_group_exc.theta = 20 * mV
+if test_phase:
+    theta_values = np.load("theta_values.npy")
+    neuron_group_exc.theta = theta_values
+else: # training phase
+    neuron_group_exc.theta = 20 * mV
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
@@ -172,7 +187,7 @@ if test_phase:
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
     syn_input_exc.connect()
-    syn_input_exc.w_ee[:] = "rand() * 0.3 * 0.65" # Initializing weights
+    syn_input_exc.w_ee[:] = "rand() * 0.3" # Initializing weights
 
 syn_input_exc.delay = 10 * ms
 
@@ -188,6 +203,8 @@ curr_image_idx = 0                             # Tracks the index of the current
 
 spike_counts_per_image = []                    # List to store the spike counts of each neuron for each image.
                                                # First dimension represents image idx and second dimension shows spike counts. 
+
+max_rate_current_image = max_rate
 
 training_image_count = len(training_image_rates)  # Total number of training images.
 test_image_count = len(test_image_rates)  # Total number of test images.
@@ -218,9 +235,10 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
         # Input frequency for current image is increased by 32 Hz if sum of 
         # spike counts of all neurons for current image is smaller than 5 and
         # training is repeated again.
-        image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx])
+        max_rate_current_image += 32
+        image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx], max_rate_current_image)
 
-        # Run simulation 150 ms without learning, before next image.
+        # Run simulation 150 ms without learning, before representing current image again.
         image_input.rates = 0 * Hz
         run(150 * ms)
     else:
@@ -229,6 +247,9 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
         # Run simulation 150 ms without learning, before next image.
         image_input.rates = 0 * Hz
         run(150 * ms)
+
+        # reset max_rate_current_image before presenting new image.
+        max_rate_current_image = max_rate
 
         curr_image_idx += 1
 
@@ -241,3 +262,5 @@ else: # training phase
     assign_neurons_to_labels(spike_counts_per_image, train_image_labels, population_exc)
     weights = syn_input_exc.w_ee[:]
     np.save('input_to_exc_trained_weights.npy', weights)
+    theta_values = neuron_group_exc.theta[:]
+    np.save('theta_values.npy', theta_values)

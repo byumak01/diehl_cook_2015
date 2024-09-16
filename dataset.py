@@ -8,21 +8,25 @@ Modifications made by: Barış Yumak, 2024
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 import struct
 
 def get_spiking_rates_and_labels(dataset_path: str = "mnist/"):
     # Load training data
     train_image_intensities = _load_images(dataset_path + 'train-images.idx3-ubyte')
     train_image_labels = _load_labels(dataset_path + 'train-labels.idx1-ubyte')
-
+    print("Train image shape: ", train_image_intensities.shape)
+    print("Train label shape: ", train_image_labels.shape)
     # Load test data
     test_image_intensities = _load_images(dataset_path + 't10k-images.idx3-ubyte')
     test_image_labels = _load_labels(dataset_path + 't10k-labels.idx1-ubyte')
+    print("Test image shape: ", test_image_intensities.shape)
+    print("Test label shape: ", test_image_labels.shape)
 
     # Convert 2d indices to 1d
     _train_image_intensities = _convert_indices_to_1d(train_image_intensities)
     _test_image_intensities = _convert_indices_to_1d(test_image_intensities)
+    print("Train image shape after conversion: ", _train_image_intensities.shape)
+    print("Test image shape after conversion: ", _test_image_intensities.shape)
 
     # Get spiking rates of images
     train_image_rates = _convert_to_spiking_rates(_train_image_intensities)
@@ -52,7 +56,6 @@ def _convert_to_spiking_rates(images):
 def _convert_indices_to_1d(images):
     return images.reshape(images.shape[0], -1)
 
-def increase_spiking_rates(image):
-    maximum_rate = max(image)
-    new_maximum_rate = maximum_rate + 32
-    return (image * new_maximum_rate) / maximum_rate
+def increase_spiking_rates(image, current_max_rate):
+    new_maximum_rate = current_max_rate + 32
+    return (image * new_maximum_rate) / current_max_rate

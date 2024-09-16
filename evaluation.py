@@ -1,6 +1,7 @@
 import typing as ty
 import numpy as np
 
+# used in training_phase:
 def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray, population_exc: int) -> None:
     assigned_labels = np.ones(population_exc, dtype=int) * -1  # initialize them as not assigned
     maximum_average_spike_counts = [0] * population_exc
@@ -21,6 +22,7 @@ def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], imag
                     assigned_labels[neuron_idx] = label
     np.save('assignments_from_training.npy', assigned_labels)
 
+# used in test_phase:
 def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int], assignments_from_training: np.ndarray) -> ty.List[int]:
     predictions = []
     for label in range(10):
