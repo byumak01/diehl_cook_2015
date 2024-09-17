@@ -20,6 +20,8 @@ from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_la
 
 start = time.time()
 
+defaultclock.dt = 0.5 * ms
+
 test_phase = False
 
 # Parameters (Values taken from GitHub of original code)
@@ -59,7 +61,7 @@ w_ie_ = 17                                     # Weight between inh. -> exc. syn
 delay_ee = 10 * ms                             # Delay between exc. -> exc. synapse
 
 # PoissonGroup parameters:
-max_rate = 63.75 * Hz                   # Spike intensities are normalized between 0 and max_rate at the beginning.
+max_rate = 63.75                               # Spike intensities are normalized between 0 and max_rate at the beginning.
 
 # NeuronGroup equations for exc. and inh. populations
 ng_eqs_exc = """
