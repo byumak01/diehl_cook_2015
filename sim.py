@@ -20,8 +20,6 @@ from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_la
 
 start = time.time()
 
-defaultclock.dt = 0.5 * ms
-
 test_phase = False
 
 # Parameters (Values taken from GitHub of original code)
