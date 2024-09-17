@@ -6,7 +6,7 @@ Original author: Ege Demir, 2024
 
 Modifications made by: Barış Yumak, 2024
 """
-
+from brian2 import *
 import numpy as np
 import struct
 
@@ -59,3 +59,20 @@ def _convert_indices_to_1d(images):
 def increase_spiking_rates(image, current_max_rate):
     new_maximum_rate = current_max_rate + 32
     return (image * new_maximum_rate) / current_max_rate
+
+def divisive_weight_normalization(synapse: Synapses, population_exc: int) -> None:
+    for post_idx in range(population_exc):
+        # Extract indices of synapses that connect to the current post-synaptic neuron
+        target_indices = np.where(synapse.j == post_idx)[0]
+
+        # Extract weights of these synapses
+        weights_to_same_post = synapse.w_ee[target_indices]
+
+        # Calculate sum of weights connected to the current post-synaptic neuron
+        sum_of_weights = np.sum(weights_to_same_post)
+
+        # Calculate normalization factor
+        normalization_factor = 78 / sum_of_weights
+        
+        # Update the weights in the Synapses object
+        synapse.w_ee[target_indices] *= normalization_factor

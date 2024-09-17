@@ -15,10 +15,12 @@ Rewritten by: Barış Yumak, 2024
 
 from brian2 import *
 import time
-from dataset import get_spiking_rates_and_labels, increase_spiking_rates
+from dataset import get_spiking_rates_and_labels, increase_spiking_rates, divisive_weight_normalization
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 
 start = time.time()
+
+defaultclock.dt = 0.5 * ms
 
 test_phase = False
 
@@ -59,7 +61,7 @@ w_ie_ = 17                                     # Weight between inh. -> exc. syn
 delay_ee = 10 * ms                             # Delay between exc. -> exc. synapse
 
 # PoissonGroup parameters:
-max_rate = 63.75 * Hz                   # Spike intensities are normalized between 0 and max_rate at the beginning.
+max_rate = 63.75                               # Spike intensities are normalized between 0 and max_rate (Hz) at the beginning.
 
 # NeuronGroup equations for exc. and inh. populations
 ng_eqs_exc = """
@@ -222,10 +224,12 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
         print(f"Current image: {curr_image_idx}")
         print(f"Elapsed time:", {time.time() - start})
     image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
+    
+    divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
+
     run(350 * ms)  # training network for 350 ms.
 
     spike_counts_current_image = spike_mon_ng_exc.count[:]
-    
     del spike_mon_ng_exc
     spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
