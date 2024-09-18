@@ -16,12 +16,21 @@ from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_la
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
 # Take boolean input from the user
-test_phase_input = input("is this a test run ? -if so write y or yes- ").strip().lower()
-test_phase = test_phase_input in ['yes', 'y']
+run_mode = input("is this a test run ? -if so write y or yes- ").strip().lower()
+test_phase = run_mode in ['yes', 'y']
 print("This is a test run") if test_phase else print("This is a training run")
 
 # Take string input for the directory name
 run_name = input("Enter the run name: ").strip()
+
+if test_phase:
+    image_count = int(input("Enter how many images you want to use: (Max 10000 for test):  "))
+    if not 0 < image_count <= 10000:
+        raise ValueError(f"Image count for test mode should be in range (0, 10000]. You entered {image_count}.")
+else:
+    image_count = int(input("Enter how many images you want to use: (Max 60000 for training):  "))
+    if not 0 < image_count <= 60000:
+        raise ValueError(f"Image count for training mode should be in range (0, 60000]. You entered {image_count}.")
 
 from brian2 import * # importing this before input() creates conflict.
 
@@ -171,7 +180,7 @@ neuron_group_inh.v = E_rest_inh - 40 * mV
 
 if test_phase:
     theta_values = np.load(f"{run_name}/theta_values.npy")
-    neuron_group_exc.theta = theta_values
+    neuron_group_exc.theta = theta_values * volt
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
@@ -209,8 +218,8 @@ syn_input_exc.delay = 10 * ms
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
-# Getting spiking rates and labels
-training_image_rates, train_image_labels, test_image_rates, test_image_labels = get_spiking_rates_and_labels()
+# Getting spiking rates and labels according to run_mode
+image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count)
 
 run(0*ms)
 
@@ -220,16 +229,6 @@ spike_counts_per_image = []                    # List to store the spike counts 
                                                # First dimension represents image idx and second dimension shows spike counts. 
 
 max_rate_current_image = max_rate
-
-training_image_count = len(training_image_rates)  # Total number of training images.
-test_image_count = len(test_image_rates)  # Total number of test images.
-
-if test_phase:
-    image_count = test_image_count
-    image_input_rates = test_image_rates
-else: # training phase
-    image_count = training_image_count
-    image_input_rates = training_image_rates
 
 while(curr_image_idx < image_count):  # While loop which will continue until all training data is finished.
     if curr_image_idx%25 == 0:
@@ -274,9 +273,9 @@ end = time.time()
 print(f"Simulation time: {end - start}")
 if test_phase:
     predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-    calculate_accuracy(predictions_per_image, test_image_labels)
+    calculate_accuracy(predictions_per_image, image_labels)
 else: # training phase
-    assign_neurons_to_labels(spike_counts_per_image, train_image_labels, population_exc, run_name)
+    assign_neurons_to_labels(spike_counts_per_image, image_labels, population_exc, run_name)
     weights = syn_input_exc.w_ee[:]
     np.save(f'{run_name}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]

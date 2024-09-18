@@ -10,29 +10,29 @@ from brian2 import *
 import numpy as np
 import struct
 
-def get_spiking_rates_and_labels(dataset_path: str = "mnist/"):
-    # Load training data
-    train_image_intensities = _load_images(dataset_path + 'train-images.idx3-ubyte')
-    train_image_labels = _load_labels(dataset_path + 'train-labels.idx1-ubyte')
-    print("Train image shape: ", train_image_intensities.shape)
-    print("Train label shape: ", train_image_labels.shape)
-    # Load test data
-    test_image_intensities = _load_images(dataset_path + 't10k-images.idx3-ubyte')
-    test_image_labels = _load_labels(dataset_path + 't10k-labels.idx1-ubyte')
-    print("Test image shape: ", test_image_intensities.shape)
-    print("Test label shape: ", test_image_labels.shape)
-
-    # Convert 2d indices to 1d
-    _train_image_intensities = _convert_indices_to_1d(train_image_intensities)
-    _test_image_intensities = _convert_indices_to_1d(test_image_intensities)
-    print("Train image shape after conversion: ", _train_image_intensities.shape)
-    print("Test image shape after conversion: ", _test_image_intensities.shape)
-
-    # Get spiking rates of images
-    train_image_rates = _convert_to_spiking_rates(_train_image_intensities)
-    test_image_rates = _convert_to_spiking_rates(_test_image_intensities)
+def get_spiking_rates_and_labels(test_phase, image_count, dataset_path: str = "mnist/"):
+    name = 't10k' if test_phase else 'train'
     
-    return train_image_rates, train_image_labels, test_image_rates, test_image_labels
+    # Load the images and labels
+    image_intensities = _load_images(dataset_path + f'{name}-images.idx3-ubyte')
+    image_intensities = _convert_indices_to_1d(image_intensities)
+    image_rates = _convert_to_spiking_rates(image_intensities)
+
+    image_labels = _load_labels(dataset_path + f'{name}-labels.idx1-ubyte')
+
+    # Check if image_count is greater than the available images
+    num_images = image_rates.shape[0]
+    if image_count > num_images:
+        raise ValueError(f"Requested image_count {image_count} exceeds the number of available images {num_images}.")
+    
+    # Select random indices
+    random_indices = np.random.choice(num_images, size=image_count, replace=False)
+    
+    # Select the subset of images and labels
+    image_rates_subset = image_rates[random_indices]
+    image_labels_subset = image_labels[random_indices]
+
+    return image_rates_subset, image_labels_subset
 
 def _load_images(filename: str):
     with open(filename, 'rb') as f:
