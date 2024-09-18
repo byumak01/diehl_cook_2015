@@ -2,7 +2,7 @@ import typing as ty
 import numpy as np
 
 # used in training_phase:
-def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray, population_exc: int) -> None:
+def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray, population_exc: int, run_name: str) -> None:
     assigned_labels = np.ones(population_exc, dtype=int) * -1  # initialize them as not assigned
     maximum_average_spike_counts = [0] * population_exc
 
@@ -20,7 +20,7 @@ def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], imag
                 if average_spike_counts[neuron_idx] > maximum_average_spike_counts[neuron_idx]:
                     maximum_average_spike_counts[neuron_idx] = average_spike_counts[neuron_idx]
                     assigned_labels[neuron_idx] = label
-    np.save('assignments_from_training.npy', assigned_labels)
+    np.save(f'{run_name}/assignments_from_training.npy', assigned_labels)
 
 # used in test_phase:
 def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int], assignments_from_training: np.ndarray) -> ty.List[int]:
@@ -45,11 +45,10 @@ def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int],
 
     return list(predictions)
 
-def get_predictions(spike_counts_per_image: ty.List[ty.List[int]]) -> ty.List[ty.List[int]]:
-    assignments_from_training = np.load('assignments_from_training.npy')
+def get_predictions(spike_counts_per_image: ty.List[ty.List[int]], run_name: str) -> ty.List[ty.List[int]]:
+    assignments_from_training = np.load(f'{run_name}/assignments_from_training.npy')
     test_image_count = len(spike_counts_per_image)
     predictions_per_image = []
-    print("type assignments from training", type(assignments_from_training))
     for image_idx in range(test_image_count):
         predictions_current_image = _get_predictions_for_current_image(spike_counts_per_image[image_idx], assignments_from_training)
         predictions_per_image.append(predictions_current_image)

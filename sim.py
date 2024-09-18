@@ -10,17 +10,32 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 
 Rewritten by: Barış Yumak, 2024
 """
-
-# TODO: Needs check conditions to see whether image size and spike per image list length are equal
-
-from brian2 import *
-import time
+import time, os
 from dataset import get_spiking_rates_and_labels, increase_spiking_rates, divisive_weight_normalization
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
+# TODO: Needs check conditions to see whether image size and spike per image list length are equal
+
+# Take boolean input from the user
+test_phase_input = input("is this a test run ? -if so write y or yes- ").strip().lower()
+test_phase = test_phase_input in ['yes', 'y']
+print("This is a test run") if test_phase else print("This is a training run")
+
+# Take string input for the directory name
+run_name = input("Enter the run name: ").strip()
+
+from brian2 import * # importing this before input() creates conflict.
+
+if not test_phase and os.path.exists(run_name):
+    raise ValueError(f"Given run_name ({run_name}) is already used for another training, please try another name.")
+
+if test_phase and (not os.path.exists(run_name) or not os.listdir(run_name)):
+    raise ValueError(f"There isn't a run named {run_name} or folder is empty. Cannot run test phase.")
+
+if not test_phase and not os.path.exists(run_name):
+        os.makedirs(run_name)
+        print(f"Directory '{run_name}' created successfully.")
 
 start = time.time()
-
-test_phase = False
 
 # Parameters (Values taken from GitHub of original code)
 # NeuronGroup Parameters:
@@ -155,7 +170,7 @@ neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
 
 if test_phase:
-    theta_values = np.load("theta_values.npy")
+    theta_values = np.load(f"{run_name}/theta_values.npy")
     neuron_group_exc.theta = theta_values
 else: # training phase
     neuron_group_exc.theta = 20 * mV
@@ -182,7 +197,7 @@ image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to i
 if test_phase:
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test, method="euler")
     syn_input_exc.connect()
-    weights = np.load('input_to_exc_trained_weights.npy')
+    weights = np.load(f'{run_name}/input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights # Setting pre-trained weights
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
@@ -258,11 +273,11 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
 end = time.time()
 print(f"Simulation time: {end - start}")
 if test_phase:
-    predictions_per_image = get_predictions(spike_counts_per_image)
+    predictions_per_image = get_predictions(spike_counts_per_image, run_name)
     calculate_accuracy(predictions_per_image, test_image_labels)
 else: # training phase
-    assign_neurons_to_labels(spike_counts_per_image, train_image_labels, population_exc)
+    assign_neurons_to_labels(spike_counts_per_image, train_image_labels, population_exc, run_name)
     weights = syn_input_exc.w_ee[:]
-    np.save('input_to_exc_trained_weights.npy', weights)
+    np.save(f'{run_name}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
-    np.save('theta_values.npy', theta_values)
+    np.save(f'{run_name}/theta_values.npy', theta_values)
