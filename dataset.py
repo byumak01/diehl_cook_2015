@@ -10,7 +10,7 @@ from brian2 import *
 import numpy as np
 import struct
 
-def get_spiking_rates_and_labels(test_phase, image_count, dataset_path: str = "mnist/"):
+def get_spiking_rates_and_labels(test_phase, image_count, seed_data, dataset_path: str = "mnist/"):
     name = 't10k' if test_phase else 'train'
     
     # Load the images and labels
@@ -26,6 +26,8 @@ def get_spiking_rates_and_labels(test_phase, image_count, dataset_path: str = "m
         raise ValueError(f"Requested image_count {image_count} exceeds the number of available images {num_images}.")
     
     # Select random indices
+    if seed_data:
+        np.random.seed(42)
     random_indices = np.random.choice(num_images, size=image_count, replace=False)
     
     # Select the subset of images and labels

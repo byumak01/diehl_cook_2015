@@ -31,6 +31,9 @@ else:
     image_count = int(input("Enter how many images you want to use: (Max 60000 for training):  "))
     if not 0 < image_count <= 60000:
         raise ValueError(f"Image count for training mode should be in range (0, 60000]. You entered {image_count}.")
+    
+_seed_data = input("seed the data? ? -if so write y or yes- ").strip().lower()
+seed_data = _seed_data in ['yes', 'y']
 
 from brian2 import * # importing this before input() creates conflict.
 
@@ -219,7 +222,7 @@ syn_input_exc.delay = 10 * ms
 spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
 # Getting spiking rates and labels according to run_mode
-image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count)
+image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count, seed_data)
 
 run(0*ms)
 
