@@ -226,6 +226,8 @@ image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image
 
 run(0*ms)
 
+update_interval = 25                       # Calculating accuracy every "update_interval" iteration
+
 curr_image_idx = 0                             # Tracks the index of the current image during iteration.
 
 spike_counts_per_image = []                    # List to store the spike counts of each neuron for each image.
@@ -243,6 +245,18 @@ while(curr_image_idx < image_count):  # While loop which will continue until all
     divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
 
     run(350 * ms)  # training network for 350 ms.
+
+    # Calculate accuracy during training at determined intervals:
+    if curr_image_idx % update_interval == 0 and curr_image_idx != 0:
+        # Get image labels for current interval
+        image_labels_curr_interval = image_labels[curr_image_idx - update_interval:curr_image_idx]
+        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
+
+        predictions_per_image = get_predictions(spike_counts_per_image, run_name)
+        calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+
+        # Reset spike_counts_per_image for new interval
+        spike_counts_per_image = []
 
     spike_counts_current_image = spike_mon_ng_exc.count[:]
     del spike_mon_ng_exc
@@ -278,7 +292,13 @@ if test_phase:
     predictions_per_image = get_predictions(spike_counts_per_image, run_name)
     calculate_accuracy(predictions_per_image, image_labels)
 else: # training phase
-    assign_neurons_to_labels(spike_counts_per_image, image_labels, population_exc, run_name)
+    # Calculate accuracy after training:
+    image_labels_curr_interval = image_labels[image_count - update_interval : image_count]
+    assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
+    predictions_per_image = get_predictions(spike_counts_per_image, run_name)
+    calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+
+    # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
     np.save(f'{run_name}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
