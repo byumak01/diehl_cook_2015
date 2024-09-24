@@ -234,6 +234,8 @@ update_interval = 25                       # Calculating accuracy every "update_
 
 curr_image_idx = 0                             # Tracks the index of the current image during iteration.
 
+accuracies = []                                # This list is for saving calculated accuracies during training.
+
 spike_counts_per_image = []                    # List to store the spike counts of each neuron for each image.
                                                # First dimension represents image idx and second dimension shows spike counts. 
 
@@ -245,7 +247,7 @@ for rc in range(run_count):
             print("----------------------------------")
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
-        image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
+        image_input.rates = image_input_rates[curr_image_idx] * Hz   # Setting poisson neuron rates for current input image.
 
         divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
 
@@ -258,7 +260,9 @@ for rc in range(run_count):
             assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
 
             predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-            calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+            accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+
+            accuracies.append(accuracy)
 
             # Reset spike_counts_per_image for new interval
             spike_counts_per_image = []
@@ -292,10 +296,15 @@ for rc in range(run_count):
             curr_image_idx += 1
     print("----------------------------------")
     print(f"{rc + 1}. iteration over dataset is finished.")
+    # Calculate accuracy after iteration over dataset is finished.
     image_labels_curr_interval = image_labels[image_count - update_interval : image_count]
-    assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
+
+    if not test_phase:
+        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
     predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-    calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+    accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+
+    accuracies.append(accuracy)
 
     # Reset curr_image_idx and spike_counts_per_image before giving dataset again.
     curr_image_idx = 0
@@ -304,12 +313,25 @@ for rc in range(run_count):
 end = time.time()
 print(f"Simulation time: {end - start}")
 
-if test_phase:
-    predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-    calculate_accuracy(predictions_per_image, image_labels)
-else: # training phase
+if not test_phase: # training phase
     # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
     np.save(f'{run_name}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
     np.save(f'{run_name}/theta_values.npy', theta_values)
+
+
+if test_phase:
+    run_label = "test"
+else:
+    run_label = "training"
+# iteration is x label of graph
+iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(update_interval, image_count+1, update_interval)]
+print(iteration)
+print(accuracies)
+plt.plot(iteration, accuracies)
+plt.title(f'Accuracy change over iterations for {run_label} phase')
+plt.xlabel("Iteration Count")
+plt.ylabel("Accuracy % ")
+plt.grid(True)
+plt.savefig(f'{run_name}/{run_label}_accuracy_graph.png')
