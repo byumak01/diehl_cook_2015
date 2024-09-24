@@ -28,6 +28,9 @@ if test_phase:
     if not 0 < image_count <= 10000:
         raise ValueError(f"Image count for test mode should be in range (0, 10000]. You entered {image_count}.")
     run_count = 1
+    update_interval = int(input(f"Enter update interval (should be equal or smaller than {image_count}): "))
+    if not 0 < update_interval <= image_count:
+        raise ValueError(f"Image count for test mode should be in range (0, {image_count}]. You entered {update_interval}.")
 else:
     image_count = int(input("Enter how many images you want to use: (Max 60000 for training):  "))
     if not 0 < image_count <= 60000:
@@ -35,6 +38,9 @@ else:
     run_count = int(input("Enter how many times you want to iterate over dataset:  "))
     if not 0 < run_count:
         raise ValueError(f"You entered an invalid run_count, it should be bigger than 0. You entered {run_count}.")
+    update_interval = int(input(f"Enter update interval (should be equal or smaller than {image_count}): "))
+    if not 0 < update_interval <= image_count:
+        raise ValueError(f"Image count for test mode should be in range (0, {image_count}]. You entered {update_interval}.")
     
 _seed_data = input("seed the data? ? -if so write y or yes- ").strip().lower()
 seed_data = _seed_data in ['yes', 'y']
@@ -229,8 +235,6 @@ spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count, seed_data)
 
 run(0*ms)
-
-update_interval = 25                       # Calculating accuracy every "update_interval" iteration
 
 curr_image_idx = 0                             # Tracks the index of the current image during iteration.
 
