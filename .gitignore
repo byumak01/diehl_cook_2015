@@ -4,4 +4,4 @@ weight_matrices
 changes.txt
 .venv_wsl
 test.py
-test
+test*
