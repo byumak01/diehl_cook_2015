@@ -331,8 +331,7 @@ else:
     run_label = "training"
 # iteration is x label of graph
 iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(update_interval, image_count+1, update_interval)]
-print(iteration)
-print(accuracies)
+
 plt.plot(iteration, accuracies)
 plt.title(f'Accuracy change over iterations for {run_label} phase')
 plt.xlabel("Iteration Count")
