@@ -27,10 +27,14 @@ if test_phase:
     image_count = int(input("Enter how many images you want to use: (Max 10000 for test):  "))
     if not 0 < image_count <= 10000:
         raise ValueError(f"Image count for test mode should be in range (0, 10000]. You entered {image_count}.")
+    run_count = 1
 else:
     image_count = int(input("Enter how many images you want to use: (Max 60000 for training):  "))
     if not 0 < image_count <= 60000:
         raise ValueError(f"Image count for training mode should be in range (0, 60000]. You entered {image_count}.")
+    run_count = int(input("Enter how many times you want to iterate over dataset:  "))
+    if not 0 < run_count:
+        raise ValueError(f"You entered an invalid run_count, it should be bigger than 0. You entered {run_count}.")
     
 _seed_data = input("seed the data? ? -if so write y or yes- ").strip().lower()
 seed_data = _seed_data in ['yes', 'y']
@@ -235,69 +239,75 @@ spike_counts_per_image = []                    # List to store the spike counts 
 
 max_rate_current_image = max_rate
 
-while(curr_image_idx < image_count):  # While loop which will continue until all training data is finished.
-    if curr_image_idx%25 == 0:
-        print("----------------------------------")
-        print(f"Current image: {curr_image_idx}")
-        print(f"Elapsed time:", {time.time() - start})
-    image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
-    
-    divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
+for rc in range(run_count):
+    while(curr_image_idx < image_count):  # While loop which will continue until all training data is finished.
+        if curr_image_idx%25 == 0:
+            print("----------------------------------")
+            print(f"Current image: {curr_image_idx}")
+            print(f"Elapsed time:", {time.time() - start})
+        image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
 
-    run(350 * ms)  # training network for 350 ms.
+        divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
 
-    # Calculate accuracy during training at determined intervals:
-    if curr_image_idx % update_interval == 0 and curr_image_idx != 0:
-        # Get image labels for current interval
-        image_labels_curr_interval = image_labels[curr_image_idx - update_interval:curr_image_idx]
-        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
+        run(350 * ms)  # training network for 350 ms.
 
-        predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-        calculate_accuracy(predictions_per_image, image_labels_curr_interval)
+        # Calculate accuracy during training at determined intervals:
+        if curr_image_idx % update_interval == 0 and curr_image_idx != 0:
+            # Get image labels for current interval
+            image_labels_curr_interval = image_labels[curr_image_idx - update_interval:curr_image_idx]
+            assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
 
-        # Reset spike_counts_per_image for new interval
-        spike_counts_per_image = []
+            predictions_per_image = get_predictions(spike_counts_per_image, run_name)
+            calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
-    spike_counts_current_image = spike_mon_ng_exc.count[:]
-    del spike_mon_ng_exc
-    spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+            # Reset spike_counts_per_image for new interval
+            spike_counts_per_image = []
 
-    sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
+        spike_counts_current_image = spike_mon_ng_exc.count[:]
+        del spike_mon_ng_exc
+        spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
-    if sum_spike_counts_current_image < 5:
-        # Input frequency for current image is increased by 32 Hz if sum of 
-        # spike counts of all neurons for current image is smaller than 5 and
-        # training is repeated again.
-        max_rate_current_image += 32
-        image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx], max_rate_current_image)
+        sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
 
-        # Run simulation 150 ms without learning, before representing current image again.
-        image_input.rates = 0 * Hz
-        run(150 * ms)
-    else:
-        spike_counts_per_image.append(spike_counts_current_image)
+        if sum_spike_counts_current_image < 5:
+            # Input frequency for current image is increased by 32 Hz if sum of 
+            # spike counts of all neurons for current image is smaller than 5 and
+            # training is repeated again.
+            max_rate_current_image += 32
+            image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx], max_rate_current_image)
 
-        # Run simulation 150 ms without learning, before next image.
-        image_input.rates = 0 * Hz
-        run(150 * ms)
+            # Run simulation 150 ms without learning, before representing current image again.
+            image_input.rates = 0 * Hz
+            run(150 * ms)
+        else:
+            spike_counts_per_image.append(spike_counts_current_image)
 
-        # reset max_rate_current_image before presenting new image.
-        max_rate_current_image = max_rate
+            # Run simulation 150 ms without learning, before next image.
+            image_input.rates = 0 * Hz
+            run(150 * ms)
 
-        curr_image_idx += 1
+            # reset max_rate_current_image before presenting new image.
+            max_rate_current_image = max_rate
 
-end = time.time()
-print(f"Simulation time: {end - start}")
-if test_phase:
-    predictions_per_image = get_predictions(spike_counts_per_image, run_name)
-    calculate_accuracy(predictions_per_image, image_labels)
-else: # training phase
-    # Calculate accuracy after training:
+            curr_image_idx += 1
+    print("----------------------------------")
+    print(f"{rc + 1}. iteration over dataset is finished.")
     image_labels_curr_interval = image_labels[image_count - update_interval : image_count]
     assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_name)
     predictions_per_image = get_predictions(spike_counts_per_image, run_name)
     calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
+    # Reset curr_image_idx and spike_counts_per_image before giving dataset again.
+    curr_image_idx = 0
+    spike_counts_per_image = []
+
+end = time.time()
+print(f"Simulation time: {end - start}")
+
+if test_phase:
+    predictions_per_image = get_predictions(spike_counts_per_image, run_name)
+    calculate_accuracy(predictions_per_image, image_labels)
+else: # training phase
     # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
     np.save(f'{run_name}/input_to_exc_trained_weights.npy', weights)
