@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description="Script to run a simulation with us
 
 # Add arguments
 parser.add_argument('--test_phase', action='store_true', help='Set this flag to indicate test phase')
+parser.add_argument('--sum_check', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--seed_data', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--run_name', type=str, default="result", help='Name of the directory/run')
 parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
@@ -268,7 +269,7 @@ for rc in range(args.run_count):
 
         sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
 
-        if sum_spike_counts_current_image < 5:
+        if args.sum_check and sum_spike_counts_current_image < 5:
             # Input frequency for current image is increased by 32 Hz if sum of 
             # spike counts of all neurons for current image is smaller than 5 and
             # training is repeated again.
