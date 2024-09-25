@@ -5,3 +5,4 @@ changes.txt
 .venv_wsl
 test.py
 test*
+output
