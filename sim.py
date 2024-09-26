@@ -253,7 +253,8 @@ for rc in range(args.run_count):
         if curr_image_idx % args.update_interval == 0 and curr_image_idx != 0:
             # Get image labels for current interval
             image_labels_curr_interval = image_labels[curr_image_idx - args.update_interval:curr_image_idx]
-            assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, args.run_name)
+            if not args.test_phase:
+                assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, args.run_name)
 
             predictions_per_image = get_predictions(spike_counts_per_image, args.run_name)
             accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
