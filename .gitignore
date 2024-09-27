@@ -3,7 +3,6 @@ __pycache__
 weight_matrices
 changes.txt
 .venv_wsl
-test.py
-test*
+test
 output
 code_gen_util
