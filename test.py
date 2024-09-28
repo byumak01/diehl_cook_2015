@@ -26,6 +26,7 @@ parser.add_argument('--run_name', type=str, default="result", help='Name of the 
 parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
 parser.add_argument('--update_interval', type=int, default=1000, help='Interval for updates during the run')
 parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
+parser.add_argument('--rf_size', type=int, default=3, help='Size of rf')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -189,7 +190,7 @@ if args.test_phase:
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
-syn_con = synapse_connections(784, 3)
+syn_con = synapse_connections(784, args.rf_size)
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
@@ -368,5 +369,5 @@ plt.ylabel('Neuron Y')
 for i in range(28):
     for j in range(28):
         plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
-plt.savefig("{args.run_name}/heatmap.png")
+plt.savefig(f"{args.run_name}/heatmap.png")
 #plt.show()
