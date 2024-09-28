@@ -177,7 +177,7 @@ g_i_post += w_ie
 
 # Creating NeuronGroup objects for exc. and inh. populations
 neuron_group_exc = NeuronGroup(N=population_exc, model=ng_eqs_exc, threshold=ng_threshold_exc, reset=ng_reset_exc, refractory=refractory_exc, method="euler")
-#neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_threshold_inh, reset=ng_reset_inh, refractory=refractory_inh, method="euler")
+neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_threshold_inh, reset=ng_reset_inh, refractory=refractory_inh, method="euler")
 
 # Setting initial values for exc. and inh. populations
 neuron_group_exc.v = E_rest_exc - 40 * mV
@@ -189,24 +189,30 @@ if args.test_phase:
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
+syn_con = synapse_connections(784, 3)
+
 # Creating Synapse object for exc. -> inh. connection
-#syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
-#syn_exc_inh.connect(j='i') # One-to-one connection
+syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
+syn_exc_inh.connect(j='i') # One-to-one connection
 
 # Setting weight for exc. -> inh. synases
-#syn_exc_inh.w_ei = w_ei_
+syn_exc_inh.w_ei = w_ei_
 
 # Creating Synapse object for inh. -> exc. connection
-#syn_inh_exc = Synapses(neuron_group_inh, neuron_group_exc, model=syn_eqs_ie, on_pre=syn_on_pre_ie, method="euler")
-#syn_inh_exc.connect("i != j") # inh. neurons connected to all exc. neurons expect the one which has the same index
+syn_inh_exc = Synapses(neuron_group_inh, neuron_group_exc, model=syn_eqs_ie, on_pre=syn_on_pre_ie, method="euler")
+syn_inh_exc.connect(i=syn_con[1], j=syn_con[0]) # inh. neurons connected to all exc. neurons expect the one which has the same index
+print(f"------------------------------")
+print(f"syn_inh_exc connection: ")
+print(f"len-> {len(syn_inh_exc.i)}")
+print(f"first 20 i -> {syn_inh_exc.i[:20]}")
+print(f"first 20 j -> {syn_inh_exc.j[:20]}")
 
 # Setting weight for inh. -> exc. synases
-#syn_inh_exc.w_ie = w_ie_
+syn_inh_exc.w_ie = w_ie_
 
 # Defining PoissonGroup for inputs
 image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to image later
 
-syn_con = synapse_connections(784, 3)
 
 # Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use 
 # equations for exc. -> exc. (ee)
@@ -218,6 +224,12 @@ if args.test_phase:
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
     syn_input_exc.connect(i=syn_con[0], j=syn_con[1])
+    print(f"------------------------------")
+    print(f"syn_input_exc connection: ")
+    print(f"len-> {len(syn_input_exc.i)}")
+    print(f"first 20 i -> {syn_input_exc.i[:20]}")
+    print(f"first 20 j -> {syn_input_exc.j[:20]}")
+
     syn_input_exc.w_ee[:] = "rand() * 0.3" # Initializing weights
 
 syn_input_exc.delay = 10 * ms
@@ -356,5 +368,5 @@ plt.ylabel('Neuron Y')
 for i in range(28):
     for j in range(28):
         plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
-plt.savefig("heatmap.png")
+plt.savefig("{args.run_name}/heatmap.png")
 #plt.show()
