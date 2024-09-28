@@ -6,4 +6,5 @@ changes.txt
 .venv_linux
 test
 output
+results
 code_gen_util
