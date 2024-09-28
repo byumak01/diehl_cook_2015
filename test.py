@@ -357,4 +357,4 @@ for i in range(28):
     for j in range(28):
         plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
 plt.savefig("heatmap.png")
-plt.show()
+#plt.show()
