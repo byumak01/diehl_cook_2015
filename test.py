@@ -266,8 +266,14 @@ for rc in range(args.run_count):
 
         run(350 * ms)  # training network for 350 ms.
 
+        spike_counts_current_image = spike_mon_ng_exc.count[:]
+        del spike_mon_ng_exc
+        spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+
+        sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
+
         # Calculate accuracy during training at determined intervals:
-        if curr_image_idx % args.update_interval == 0 and curr_image_idx != 0:
+        if not sum_spike_counts_current_image < 5 and curr_image_idx % args.update_interval == 0 and curr_image_idx != 0:
             # Get image labels for current interval
             image_labels_curr_interval = image_labels[curr_image_idx - args.update_interval:curr_image_idx]
             if not args.test_phase:
@@ -280,12 +286,6 @@ for rc in range(args.run_count):
 
             # Reset spike_counts_per_image for new interval
             spike_counts_per_image = []
-
-        spike_counts_current_image = spike_mon_ng_exc.count[:]
-        del spike_mon_ng_exc
-        spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
-
-        sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
 
         if args.sum_check and sum_spike_counts_current_image < 5:
             # Input frequency for current image is increased by 32 Hz if sum of 
