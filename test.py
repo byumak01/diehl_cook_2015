@@ -182,7 +182,7 @@ neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_
 
 # Setting initial values for exc. and inh. populations
 neuron_group_exc.v = E_rest_exc - 40 * mV
-#neuron_group_inh.v = E_rest_inh - 40 * mV
+neuron_group_inh.v = E_rest_inh - 40 * mV
 
 if args.test_phase:
     theta_values = np.load(f"results/{args.run_name}/theta_values.npy")
