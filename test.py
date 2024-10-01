@@ -11,7 +11,13 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 Rewritten by: Barış Yumak, 2024
 """
 import time, os, argparse
-from test_util import get_spiking_rates_and_labels, increase_spiking_rates, divisive_weight_normalization, synapse_connections
+from test_util import (
+    get_spiking_rates_and_labels,
+    increase_spiking_rates,
+    divisive_weight_normalization,
+    synapse_connections_exc,
+    synapse_connections_inh,
+)
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
@@ -190,7 +196,8 @@ if args.test_phase:
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
-syn_con = synapse_connections(784, args.rf_size)
+syn_con_exc = synapse_connections_exc(784, args.rf_size)
+syn_con_inh = synapse_connections_inh(784, args.rf_size)
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
@@ -201,7 +208,7 @@ syn_exc_inh.w_ei = w_ei_
 
 # Creating Synapse object for inh. -> exc. connection
 syn_inh_exc = Synapses(neuron_group_inh, neuron_group_exc, model=syn_eqs_ie, on_pre=syn_on_pre_ie, method="euler")
-syn_inh_exc.connect(i=syn_con[1], j=syn_con[0]) # inh. neurons connected to all exc. neurons expect the one which has the same index
+syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0]) # inh. neurons connected to all exc. neurons expect the one which has the same index
 print(f"------------------------------")
 print(f"syn_inh_exc connection: ")
 print(f"len-> {len(syn_inh_exc.i)}")
@@ -219,12 +226,12 @@ image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to i
 # equations for exc. -> exc. (ee)
 if args.test_phase:
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test, method="euler")
-    syn_input_exc.connect(i=syn_con[0], j=syn_con[1])
+    syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
     weights = np.load(f'results/{args.run_name}/input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights # Setting pre-trained weights
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
-    syn_input_exc.connect(i=syn_con[0], j=syn_con[1])
+    syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
     print(f"------------------------------")
     print(f"syn_input_exc connection: ")
     print(f"len-> {len(syn_input_exc.i)}")

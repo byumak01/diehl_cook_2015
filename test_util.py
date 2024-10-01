@@ -71,11 +71,21 @@ def divisive_weight_normalization(synapse: Synapses, population_exc: int) -> Non
         # Update the weights in the Synapses object
         synapse.w_ee[target_indices] *= normalization_factor
 
-def receptive_field_for(neuron_idx, rf_size):
+def receptive_field_for_exc(neuron_idx, rf_size):
     half_size = rf_size // 2
     return [28 * j + i for i, j in [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1) 
                                     for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1) 
                                     if 0 <= i < 28 and 0 <= j < 28]]
 
-def synapse_connections(neuron_population, rf_size):
-    return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for(i, rf_size)])
+
+def receptive_field_for_inh(neuron_idx, rf_size):
+    half_size = rf_size // 2
+    return [28 * j + i for i, j in [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1) 
+                                    for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1) 
+                                    if 0 <= i < 28 and 0 <= j < 28 and 28 * j + i != neuron_idx]]
+
+def synapse_connections_exc(neuron_population, rf_size):
+    return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_exc(i, rf_size)])
+
+def synapse_connections_inh(neuron_population, rf_size):
+    return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_inh(i, rf_size)])
