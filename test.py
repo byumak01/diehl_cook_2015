@@ -10,6 +10,7 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 
 Rewritten by: Barış Yumak, 2024
 """
+from datetime import datetime 
 import time, os, argparse
 from test_util import (
     get_spiking_rates_and_labels,
@@ -17,7 +18,8 @@ from test_util import (
     divisive_weight_normalization,
     synapse_connections_exc,
     synapse_connections_inh,
-)
+    draw_heatmap
+    )
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
@@ -28,7 +30,6 @@ parser = argparse.ArgumentParser(description="Script to run a simulation with us
 parser.add_argument('--test_phase', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--sum_check', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--seed_data', action='store_true', help='Set this flag to indicate test phase')
-parser.add_argument('--run_name', type=str, default="result", help='Name of the directory/run')
 parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
 parser.add_argument('--update_interval', type=int, default=1000, help='Interval for updates during the run')
 parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
@@ -39,22 +40,21 @@ args = parser.parse_args()
 
 # Use the arguments
 print(f'Test phase: {args.test_phase}')
-print(f'Run name: {args.run_name}')
 print(f'Image count: {args.image_count}')
 print(f'Update interval: {args.update_interval}')
 print(f'Run count: {args.run_count}')
 
+run_name = datetime.now().strftime("%m%d_%H%M%S")
+run_path = f"runs/{run_name}"
+
 from brian2 import * # importing this before input() creates conflict.
 
-if not args.test_phase and os.path.exists(f"results/{args.run_name}"):
-    raise ValueError(f"Given run_name ({args.run_name}) is already used for another training, please try another name.")
-
-if args.test_phase and (not os.path.exists(f"results/{args.run_name}") or not os.listdir(f"results/{args.run_name}")):
-    raise ValueError(f"There isn't a run named {args.run_name} or folder is empty. Cannot run test phase.")
+if args.test_phase and (not os.path.exists(run_path) or not os.listdir(run_path)):
+    raise ValueError(f"There isn't a run named {run_name} or folder is empty. Cannot run test phase.")
 
 if not args.test_phase and not os.path.exists("results/{args.run_name}"):
-        os.makedirs(f"results/{args.run_name}")
-        print(f"Directory 'results/{args.run_name}' created successfully.")
+        os.makedirs(run_path)
+        print(f"Directory {run_path} created successfully.")
 
 start = time.time()
 
@@ -191,8 +191,8 @@ neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
 
 if args.test_phase:
-    theta_values = np.load(f"results/{args.run_name}/theta_values.npy")
-    neuron_group_exc.theta = theta_values * volt
+    theta_values_exc = np.load(f"{run_path}/theta_values_exc.npy")
+    neuron_group_exc.theta = theta_values_exc * volt
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
@@ -225,10 +225,12 @@ image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to i
 # Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use 
 # equations for exc. -> exc. (ee)
 if args.test_phase:
+
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test, method="euler")
     syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
-    weights = np.load(f'results/{args.run_name}/input_to_exc_trained_weights.npy')
+    weights = np.load(f'{run_path}/input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights # Setting pre-trained weights
+
 else: # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training, on_post=syn_on_post_ee_training, method="euler")
     syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
@@ -246,6 +248,7 @@ syn_input_exc.delay = 10 * ms
 spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
 full_spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+poisson_spike_mon = SpikeMonitor(image_input, record=True)
 
 # Getting spiking rates and labels according to run_mode
 image_input_rates, image_labels = get_spiking_rates_and_labels(args.test_phase, args.image_count, args.seed_data, max_rate)
@@ -284,9 +287,9 @@ for rc in range(args.run_count):
             # Get image labels for current interval
             image_labels_curr_interval = image_labels[curr_image_idx - args.update_interval:curr_image_idx]
             if not args.test_phase:
-                assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"results/{args.run_name}")
+                assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
 
-            predictions_per_image = get_predictions(spike_counts_per_image, f"results/{args.run_name}")
+            predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
             accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
             accuracies.append(accuracy)
@@ -321,8 +324,8 @@ for rc in range(args.run_count):
     image_labels_curr_interval = image_labels[args.image_count - args.update_interval : args.image_count]
 
     if not args.test_phase:
-        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"results/{args.run_name}")
-    predictions_per_image = get_predictions(spike_counts_per_image, f"results/{args.run_name}")
+        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
+    predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
     accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
     accuracies.append(accuracy)
@@ -337,10 +340,9 @@ print(f"Simulation time: {end - start}")
 if not args.test_phase: # training phase
     # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
-    np.save(f'results/{args.run_name}/input_to_exc_trained_weights.npy', weights)
+    np.save(f'{run_path}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
-    np.save(f'results/{args.run_name}/theta_values.npy', theta_values)
-
+    np.save(f'{run_path}/theta_values_exc.npy', theta_values)
 
 if args.test_phase:
     run_label = "test"
@@ -355,26 +357,7 @@ plt.title(f'Accuracy change over iterations for {run_label} phase')
 plt.xlabel("Iteration Count")
 plt.ylabel("Accuracy % ")
 plt.grid(True)
-plt.savefig(f'results/{args.run_name}/{run_label}_accuracy_graph.png')
+plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
 
-
-spike_counts = full_spike_mon_ng_exc.count[:]
-
-# Reshape the spike counts to a 28x28 grid
-spike_counts_grid = spike_counts.reshape(28, 28)
-
-
-# Plotting the spike counts in a grid
-plt.figure(figsize=(12,12))
-plt.imshow(spike_counts_grid, cmap='hot', interpolation='nearest')
-plt.colorbar(label='Spike Count')
-plt.title('Spike Counts in a 28x28 Grid')
-plt.xlabel('Neuron X')
-plt.ylabel('Neuron Y')
-
-# Optional: annotate each square with the spike count
-for i in range(28):
-    for j in range(28):
-        plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
-plt.savefig(f"results/{args.run_name}/heatmap.png")
-#plt.show()
+draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", "heatmap_exc1")
+draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "heatmap_poisson")

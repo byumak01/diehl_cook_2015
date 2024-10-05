@@ -89,3 +89,23 @@ def synapse_connections_exc(neuron_population, rf_size):
 
 def synapse_connections_inh(neuron_population, rf_size):
     return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_inh(i, rf_size)])
+
+def draw_heatmap(spike_counts, path, img_name):
+    # Reshape the spike counts to a 28x28 grid
+    spike_counts_grid = spike_counts.reshape(28, 28)
+
+    plt.clf()
+    # Plotting the spike counts in a grid
+    plt.figure(figsize=(12,12))
+    plt.imshow(spike_counts_grid, cmap='hot', interpolation='nearest')
+    plt.colorbar(label='Spike Count')
+    plt.title(f'{img_name}')
+    plt.xlabel('Neuron X')
+    plt.ylabel('Neuron Y')
+
+    # Optional: annotate each square with the spike count
+    for i in range(28):
+        for j in range(28):
+            plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
+    plt.savefig(f"{path}/{img_name}.png")
+    #plt.show()
