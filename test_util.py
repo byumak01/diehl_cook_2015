@@ -2,13 +2,13 @@ from brian2 import *
 import numpy as np
 import struct
 
-def get_spiking_rates_and_labels(test_phase, image_count, seed_data, dataset_path: str = "mnist/"):
+def get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate, dataset_path: str = "mnist/"):
     name = 't10k' if test_phase else 'train'
     
     # Load the images and labels
     image_intensities = _load_images(dataset_path + f'{name}-images.idx3-ubyte')
     image_intensities = _convert_indices_to_1d(image_intensities)
-    image_rates = _convert_to_spiking_rates(image_intensities)
+    image_rates = _convert_to_spiking_rates(image_intensities, max_rate)
 
     image_labels = _load_labels(dataset_path + f'{name}-labels.idx1-ubyte')
 
@@ -40,10 +40,10 @@ def _load_labels(filename: str):
         labels = np.fromfile(f, dtype=np.uint8)
     return labels
 
-# Normalizes pixel intensities between 0 and 63.75. Normalized value will
+# Normalizes pixel intensities between 0 and max_rate. Normalized value will
 # be spiking rate (Hz) of the cell.
-def _convert_to_spiking_rates(images):
-    return (images * 63.75) / 255
+def _convert_to_spiking_rates(images, max_rate):
+    return (images * max_rate) / 255
 
 # Converts indices spiking rates from 2d to 1d, so that it can be used in
 # PoissonGroup object.

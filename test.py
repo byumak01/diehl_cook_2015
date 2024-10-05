@@ -248,7 +248,7 @@ spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 full_spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
 # Getting spiking rates and labels according to run_mode
-image_input_rates, image_labels = get_spiking_rates_and_labels(args.test_phase, args.image_count, args.seed_data)
+image_input_rates, image_labels = get_spiking_rates_and_labels(args.test_phase, args.image_count, args.seed_data, max_rate)
 
 run(0*ms)
 
