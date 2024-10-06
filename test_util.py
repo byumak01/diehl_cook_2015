@@ -151,7 +151,7 @@ def get_args():
     parser.add_argument('--w_ei_', type=float, default=10.4, help="Weight for exc.->inh. synapse")
     parser.add_argument('--w_ie_', type=float, default=17, help="Weight for inh.->exc. synapse")
     parser.add_argument('--delay_ee', type=float, default=10, help="Delay for exc.->exc. synapse (ms)")
-
+    parser.add_argument('--g_e_multiplier', type=float, default=1, help="g_e_multiplier (on_pre -> g_e_post = w_ee * g_e_multiplier)")
     # Add PoissonGroup parameters
     parser.add_argument('--max_rate', type=float, default=63.75, help="Maximum rate for PoissonGroup (Hz)")
     # Other params

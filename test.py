@@ -22,7 +22,7 @@ from test_util import (
     get_args,
     write_to_csv
     )
-from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
+from test_evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
 # Parse the arguments
@@ -88,6 +88,7 @@ w_max_ee = args.w_max_ee
 w_ei_ = args.w_ei_
 w_ie_ = args.w_ie_
 delay_ee = args.delay_ee * ms
+g_e_multiplier = args.g_e_multiplier
 # PoissonGroup parameters:
 max_rate = args.max_rate                                # Spike intensities are normalized between 0 and max_rate (Hz) at the beginning.
 
@@ -139,7 +140,7 @@ dApost2_ee/dt = -Apost2_ee/tau_Apost2_ee : 1  (event-driven) # post-synaptic tra
 syn_on_pre_ee_training = """
 Apre_ee = 1
 w_ee = clip(w_ee + (-eta_pre_ee * Apost1_ee), w_min_ee, w_max_ee)
-g_e_post += w_ee
+g_e_post += w_ee * g_e_multiplier
 """
 
 syn_on_post_ee_training = """
