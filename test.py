@@ -11,31 +11,21 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 Rewritten by: Barış Yumak, 2024
 """
 from datetime import datetime 
-import time, os, argparse
+import time, os
 from test_util import (
     get_spiking_rates_and_labels,
     increase_spiking_rates,
     divisive_weight_normalization,
     synapse_connections_exc,
     synapse_connections_inh,
-    draw_heatmap
+    draw_heatmap,
+    get_args
     )
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
-# Create the parser
-parser = argparse.ArgumentParser(description="Script to run a simulation with user inputs")
-
-# Add arguments
-parser.add_argument('--test_phase', action='store_true', help='Set this flag to indicate test phase')
-parser.add_argument('--seed_data', action='store_true', help='Set this flag to indicate test phase')
-parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
-parser.add_argument('--update_interval', type=int, default=1000, help='Interval for updates during the run')
-parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
-parser.add_argument('--rf_size', type=int, default=3, help='Size of rf')
-
 # Parse the arguments
-args = parser.parse_args()
+args = get_args()
 
 # Use the arguments
 print(f'Test phase: {args.test_phase}')
@@ -51,50 +41,54 @@ from brian2 import * # importing this before input() creates conflict.
 if args.test_phase and (not os.path.exists(run_path) or not os.listdir(run_path)):
     raise ValueError(f"There isn't a run named {run_name} or folder is empty. Cannot run test phase.")
 
-if not args.test_phase and not os.path.exists("results/{args.run_name}"):
+if not args.test_phase and not os.path.exists(f"{run_path}"):
         os.makedirs(run_path)
         print(f"Directory {run_path} created successfully.")
 
 start = time.time()
 
-# Parameters (Values taken from GitHub of original code)
+# Parameters
+test_phase = args.test_phase
+seed_data = args.seed_data
+run_count = args.run_count
+image_count = args.image_count
+update_interval = args.update_interval
+rf_size = args.rf_size
 # NeuronGroup Parameters:
-E_rest_exc  = -65 * mV                         # E_rest for excitatory population
-E_rest_inh  = -60 * mV                         # E_rest for inhibitory population
-E_exc_for_exc = 0 * mV                         # E_exc for excitatory population
-E_inh_for_exc = -100 * mV                      # E_inh for excitatory population
-E_exc_for_inh = 0 * mV                         # E_exc for inhibitory population
-E_inh_for_inh = -85 * mV                       # E_inh for inhibitory population
-tau_lif_exc = 100 * ms                         # LIF decay rate for excitatory population
-tau_lif_inh = 10 * ms                          # LIF decay rate for inhibitory population
-tau_ge  = 1 * ms                               # g_e decay rate (same in both populations)
-tau_gi  = 2 * ms                               # g_i decay rate (same in both populations)
-tau_theta =  1e7 * ms                          # theta decay rate
-theta_inc_exc =  0.05 * mV                     # theta increment amount for excitatory population
-refractory_exc = 5 * ms                        # refractory period for excitatory population
-refractory_inh = 2 * ms                        # refractory period for inhibitory population
-v_threshold_exc = -52 * mV                     # spiking threshold for excitatory population
-v_threshold_inh = -40 * mV                     # spiking threshold for inhibitory population
-v_offset_exc = 20 * mV                         # offset for excitatory neuron threshold condition (??)
-v_reset_exc = -65 * mV                         # membrane potential reset value after spiking for excitatory population
-v_reset_inh = -45 * mV                         # membrane potential reset value after spiking for inhibitory population
-population_exc = 784                           # Excitatory neuron population
-population_inh = population_exc                # Inhibitory neuron population
-    
+E_rest_exc = args.E_rest_exc * mV
+E_rest_inh = args.E_rest_inh * mV
+E_exc_for_exc = args.E_exc_for_exc * mV
+E_inh_for_exc = args.E_inh_for_exc * mV
+E_exc_for_inh = args.E_exc_for_inh * mV
+E_inh_for_inh = args.E_inh_for_inh * mV
+tau_lif_exc = args.tau_lif_exc * ms
+tau_lif_inh = args.tau_lif_inh * ms
+tau_ge = args.tau_ge * ms
+tau_gi = args.tau_gi * ms
+tau_theta = args.tau_theta * ms
+theta_inc_exc = args.theta_inc_exc * mV
+refractory_exc = args.refractory_exc * ms
+refractory_inh = args.refractory_inh * ms
+v_threshold_exc = args.v_threshold_exc * mV
+v_threshold_inh = args.v_threshold_inh * mV
+v_offset_exc = args.v_offset_exc * mV
+v_reset_exc = args.v_reset_exc * mV
+v_reset_inh = args.v_reset_inh * mV
+population_exc = args.population_exc
+population_inh = args.population_inh   
 # Synapse Parameters:      
-tau_Apre_ee = 20 * ms                          # Apre decay rate for synapse between two excitatory neurons
-tau_Apost1_ee = 20 * ms                        # Apost1 decay rate for synapse between two excitatory neurons
-tau_Apost2_ee = 40 * ms                        # Apost2 decay rate for synapse between two excitatory neurons
-eta_pre_ee  = 0.0001                           # Pre-synaptic learning rate for synapse between two excitatory neurons
-eta_post_ee = 0.01                             # Post-synaptic learning rate for synapse between two excitatory neurons
-w_min_ee = 0                                   # Minimum weight value for synapse between two excitatory neurons
-w_max_ee = 1                                   # Minimum weight value for synapse between two excitatory neurons
-w_ei_ = 10.4                                   # Weight between exc. -> inh. synapse
-w_ie_ = 17                                     # Weight between inh. -> exc. synapse
-delay_ee = 10 * ms                             # Delay between exc. -> exc. synapse
-
+tau_Apre_ee = args.tau_Apre_ee * ms
+tau_Apost1_ee = args.tau_Apost1_ee * ms
+tau_Apost2_ee = args.tau_Apost2_ee * ms
+eta_pre_ee = args.eta_pre_ee
+eta_post_ee = args.eta_post_ee
+w_min_ee = args.w_min_ee
+w_max_ee = args.w_max_ee
+w_ei_ = args.w_ei_
+w_ie_ = args.w_ie_
+delay_ee = args.delay_ee * ms
 # PoissonGroup parameters:
-max_rate = 63.75                               # Spike intensities are normalized between 0 and max_rate (Hz) at the beginning.
+max_rate = args.max_rate                                # Spike intensities are normalized between 0 and max_rate (Hz) at the beginning.
 
 # NeuronGroup equations for exc. and inh. populations
 ng_eqs_exc = """
@@ -105,7 +99,7 @@ dg_i/dt = -g_i/tau_gi : 1                                                       
 
 # Theta is used for adaptive threshold mechanism. It uses its trained value in test phase.
 # w_sum is used in divisive weight normalization.
-if args.test_phase:
+if test_phase:
     ng_eqs_exc += "theta : volt"
 else:
     ng_eqs_exc += "dtheta/dt = -theta/tau_theta  : volt"
@@ -125,7 +119,7 @@ ng_reset_exc = """
 v = v_reset_exc 
 """
 
-if not args.test_phase:
+if not test_phase:
     ng_reset_exc = "theta += theta_inc_exc"
 
 ng_reset_inh = """
@@ -189,14 +183,14 @@ neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_
 neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
 
-if args.test_phase:
+if test_phase:
     theta_values_exc = np.load(f"{run_path}/theta_values_exc.npy")
     neuron_group_exc.theta = theta_values_exc * volt
 else: # training phase
     neuron_group_exc.theta = 20 * mV
 
-syn_con_exc = synapse_connections_exc(784, args.rf_size)
-syn_con_inh = synapse_connections_inh(784, args.rf_size)
+syn_con_exc = synapse_connections_exc(784, rf_size)
+syn_con_inh = synapse_connections_inh(784, rf_size)
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
@@ -223,7 +217,7 @@ image_input = PoissonGroup(N=784, rates=0*Hz) # rates are changed according to i
 
 # Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use 
 # equations for exc. -> exc. (ee)
-if args.test_phase:
+if test_phase:
 
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test, method="euler")
     syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
@@ -250,7 +244,7 @@ full_spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 poisson_spike_mon = SpikeMonitor(image_input, record=True)
 
 # Getting spiking rates and labels according to run_mode
-image_input_rates, image_labels = get_spiking_rates_and_labels(args.test_phase, args.image_count, args.seed_data, max_rate)
+image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate)
 
 run(0*ms)
 
@@ -263,8 +257,8 @@ spike_counts_per_image = []                    # List to store the spike counts 
 
 max_rate_current_image = max_rate
 
-for rc in range(args.run_count):
-    while(curr_image_idx < args.image_count):  # While loop which will continue until all training data is finished.
+for rc in range(run_count):
+    while(curr_image_idx < image_count):  # While loop which will continue until all training data is finished.
         if curr_image_idx%50 == 0:
             print("----------------------------------")
             print(f"Current image: {curr_image_idx}")
@@ -283,10 +277,10 @@ for rc in range(args.run_count):
         sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
 
         # Calculate accuracy during training at determined intervals:
-        if not sum_spike_counts_current_image < 5 and curr_image_idx % args.update_interval == 0 and curr_image_idx != 0:
+        if not sum_spike_counts_current_image < 5 and curr_image_idx % update_interval == 0 and curr_image_idx != 0:
             # Get image labels for current interval
-            image_labels_curr_interval = image_labels[curr_image_idx - args.update_interval:curr_image_idx]
-            if not args.test_phase:
+            image_labels_curr_interval = image_labels[curr_image_idx - update_interval:curr_image_idx]
+            if not test_phase:
                 assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
 
             predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
@@ -294,8 +288,8 @@ for rc in range(args.run_count):
 
             accuracies.append(accuracy)
             
-            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"heatmap_R{args.run_count}_I{curr_image_idx}_exc1")
-            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"heatmap_R{args.run_count}_I{curr_image_idx}_poisson")
+            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"heatmap_R{run_count}_I{curr_image_idx}_exc1")
+            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"heatmap_R{run_count}_I{curr_image_idx}_poisson")
 
             # Reset spike_counts_per_image for new interval
             spike_counts_per_image = []
@@ -324,9 +318,9 @@ for rc in range(args.run_count):
     print("----------------------------------")
     print(f"{rc + 1}. iteration over dataset is finished.")
     # Calculate accuracy after iteration over dataset is finished.
-    image_labels_curr_interval = image_labels[args.image_count - args.update_interval : args.image_count]
+    image_labels_curr_interval = image_labels[image_count - update_interval : image_count]
 
-    if not args.test_phase:
+    if not test_phase:
         assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
     predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
     accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
@@ -340,19 +334,19 @@ for rc in range(args.run_count):
 end = time.time()
 print(f"Simulation time: {end - start}")
 
-if not args.test_phase: # training phase
+if not test_phase: # training phase
     # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
     np.save(f'{run_path}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
     np.save(f'{run_path}/theta_values_exc.npy', theta_values)
 
-if args.test_phase:
+if test_phase:
     run_label = "test"
 else:
     run_label = "training"
 # iteration is x label of graph
-iteration = [rc * args.image_count + img_idx for rc in range(args.run_count) for img_idx in range(args.update_interval, args.image_count+1, args.update_interval)]
+iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(update_interval, image_count+1, update_interval)]
 
 plt.figure(100)
 plt.plot(iteration, accuracies)
