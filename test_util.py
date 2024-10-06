@@ -1,6 +1,6 @@
 from brian2 import *
 import numpy as np
-import struct, argparse
+import struct, argparse, csv, os
 
 def get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate, dataset_path: str = "mnist/"):
     name = 't10k' if test_phase else 'train'
@@ -116,13 +116,7 @@ def get_args():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
 
-    parser.add_argument('--test_phase', action='store_true', help="Set this flag to indicate test_phase")
-    parser.add_argument('--seed_data', action='store_true', help="Set this flag to seed the data")
-    parser.add_argument('--run_count', type=int, default=1, help="How many times dataset will be iterated")
-    parser.add_argument('--image_count', type=int, default=5000, help="How many images will be used for run")
-    parser.add_argument('--update_interval', type=int, default=500, help="Update interval for accuracy and heatmaps")
-    parser.add_argument('--rf_size', type=int, default=3, help="RF size of neurons")
-#
+
     # Add NeuronGroup parameters
     parser.add_argument('--E_rest_exc', type=float, default=-65, help="Resting potential for excitatory neurons (mV)")
     parser.add_argument('--E_rest_inh', type=float, default=-60, help="Resting potential for inhibitory neurons (mV)")
@@ -160,5 +154,37 @@ def get_args():
 
     # Add PoissonGroup parameters
     parser.add_argument('--max_rate', type=float, default=63.75, help="Maximum rate for PoissonGroup (Hz)")
-
+    # Other params
+    parser.add_argument('--seed_data', action='store_true', help="Set this flag to seed the data")
+    parser.add_argument('--rf_size', type=int, default=3, help="RF size of neurons")
+    parser.add_argument('--test_phase', action='store_true', help="Set this flag to indicate test_phase")
+    parser.add_argument('--run_count', type=int, default=1, help="How many times dataset will be iterated")
+    parser.add_argument('--image_count', type=int, default=5000, help="How many images will be used for run")
+    parser.add_argument('--update_interval', type=int, default=500, help="Update interval for accuracy and heatmaps")
+#
     return parser.parse_args()
+
+def write_to_csv(args, accuracy, run_name, filename='runs.csv'):
+    # Get a dictionary of all arguments
+    args_dict = vars(args)
+
+    # Add the accuracy to the dictionary
+    args_dict['accuracy'] = accuracy
+    args_dict['run_name'] = run_name
+
+    # Check if the file exists to determine if we need to write the header
+    file_exists = os.path.isfile(filename)
+
+    # Writing to a CSV file in append mode
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+
+        # Write header (parameter names) if file does not exist
+        if not file_exists:
+            writer.writerow(args_dict.keys())
+
+        # Write parameter values (append to the file)
+        writer.writerow(args_dict.values())
+
+    print(f"Parameters and accuracy appended to {filename}")
+

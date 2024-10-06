@@ -19,7 +19,8 @@ from test_util import (
     synapse_connections_exc,
     synapse_connections_inh,
     draw_heatmap,
-    get_args
+    get_args,
+    write_to_csv
     )
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
@@ -358,3 +359,5 @@ plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
 
 draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", "heatmap_exc1")
 draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "heatmap_poisson")
+
+write_to_csv(args, accuracies[-1], run_name)
