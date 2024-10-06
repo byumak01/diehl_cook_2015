@@ -1,2 +1,0 @@
-machine,run_name,tau_theta,theta_inc_exc1,theta_inc_exc2,max_rate,rf_size,run_count,image_count,update_interval,final_accuracy
-remote,1005_182819,10. ks,50. uV,25. uV,63.75,5,1,20,10,70.0
