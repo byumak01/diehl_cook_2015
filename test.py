@@ -265,10 +265,11 @@ max_rate_current_image = max_rate
 
 for rc in range(args.run_count):
     while(curr_image_idx < args.image_count):  # While loop which will continue until all training data is finished.
-        if curr_image_idx%25 == 0:
+        if curr_image_idx%50 == 0:
             print("----------------------------------")
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
+            print("----------------------------------")
         image_input.rates = image_input_rates[curr_image_idx] * Hz   # Setting poisson neuron rates for current input image.
 
         divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
@@ -292,6 +293,9 @@ for rc in range(args.run_count):
             accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
             accuracies.append(accuracy)
+            
+            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"heatmap_R{args.run_count}_I{curr_image_idx}_exc1")
+            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"heatmap_R{args.run_count}_I{curr_image_idx}_poisson")
 
             # Reset spike_counts_per_image for new interval
             spike_counts_per_image = []
