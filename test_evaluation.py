@@ -1,7 +1,29 @@
 import typing as ty
 import numpy as np
 
-def assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray, population_exc: int, run_name: str) -> None:
+def acc_update_if_necessary(test_phase, curr_image_idx, acc_update_interval, image_labels, spike_counts_per_image, population_exc, accuracies, run_path):
+    if curr_image_idx % acc_update_interval == 0 and curr_image_idx !=0:
+        # Get image labels for current interval
+        image_labels_curr_interval = image_labels[curr_image_idx - acc_update_interval:curr_image_idx]
+
+        accuracy = get_accuracy(test_phase, spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
+        accuracies.append(accuracy)
+            
+        # Reset spike_counts_per_image for new interval
+        spike_counts_per_image = []
+    return spike_counts_per_image
+        
+def get_accuracy(test_phase, spike_counts_per_image, image_labels, population_exc, run_path):
+
+    if not test_phase:
+        _assign_neurons_to_labels(spike_counts_per_image, image_labels, population_exc, f"{run_path}")
+
+    predictions_per_image = _get_predictions(spike_counts_per_image, f"{run_path}")
+    accuracy = _calculate_accuracy(predictions_per_image, image_labels)
+
+    return accuracy
+
+def _assign_neurons_to_labels(spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray, population_exc: int, run_name: str) -> None:
     assigned_labels = np.ones(population_exc, dtype=int) * -1  # initialize them as not assigned
     maximum_average_spike_counts = [0] * population_exc
 
@@ -44,7 +66,7 @@ def _get_predictions_for_current_image(spike_counts_current_image: ty.List[int],
 
     return list(predictions)
 
-def get_predictions(spike_counts_per_image: ty.List[ty.List[int]], run_name: str) -> ty.List[ty.List[int]]:
+def _get_predictions(spike_counts_per_image: ty.List[ty.List[int]], run_name: str) -> ty.List[ty.List[int]]:
     assignments_from_training = np.load(f'{run_name}/assignments_from_training.npy')
     test_image_count = len(spike_counts_per_image)
     predictions_per_image = []
@@ -54,7 +76,7 @@ def get_predictions(spike_counts_per_image: ty.List[ty.List[int]], run_name: str
 
     return predictions_per_image
 
-def calculate_accuracy(predictions_per_image: ty.List[ty.List[int]], test_image_labels: np.ndarray) -> float:
+def _calculate_accuracy(predictions_per_image: ty.List[ty.List[int]], test_image_labels: np.ndarray) -> float:
     predictions_per_image_array = np.array(predictions_per_image)
     test_image_count = len(test_image_labels)
     

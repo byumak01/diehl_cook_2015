@@ -18,12 +18,14 @@ from test_util import (
     divisive_weight_normalization,
     synapse_connections_exc,
     synapse_connections_inh,
+    draw_update_if_necessary,
     draw_heatmap,
     draw_weights,
+    draw_accuracies,
     get_args,
     write_to_csv
     )
-from test_evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
+from test_evaluation import get_accuracy, acc_update_if_necessary
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
 # Parse the arguments
@@ -32,7 +34,8 @@ args = get_args()
 # Use the arguments
 print(f'Test phase: {args.test_phase}')
 print(f'Image count: {args.image_count}')
-print(f'Update interval: {args.update_interval}')
+print(f'Acc Update interval: {args.acc_update_interval}')
+print(f'Draw Update interval: {args.draw_update_interval}')
 print(f'Run count: {args.run_count}')
 
 run_name = datetime.now().strftime("%m%d_%H%M%S")
@@ -54,7 +57,8 @@ test_phase = args.test_phase
 seed_data = args.seed_data
 run_count = args.run_count
 image_count = args.image_count
-update_interval = args.update_interval
+acc_update_interval = args.acc_update_interval
+draw_update_interval = args.draw_update_interval
 rf_size = args.rf_size
 # NeuronGroup Parameters:
 E_rest_exc = args.E_rest_exc * mV
@@ -241,9 +245,9 @@ else: # training phase
 syn_input_exc.delay = 10 * ms
 
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
-spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
-full_spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 poisson_spike_mon = SpikeMonitor(image_input, record=True)
 
 syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=500*ms)
@@ -275,30 +279,12 @@ for rc in range(run_count):
 
         run(350 * ms)  # training network for 350 ms.
 
-        spike_counts_current_image = spike_mon_ng_exc.count[:]
-        del spike_mon_ng_exc
-        spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+        spike_counts_current_image = spike_mon_ng_exc_temp.count[:]
+        del spike_mon_ng_exc_temp
+        spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
         sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
 
-        # Calculate accuracy during training at determined intervals:
-        if not sum_spike_counts_current_image < 5 and curr_image_idx % update_interval == 0 and curr_image_idx != 0:
-            # Get image labels for current interval
-            image_labels_curr_interval = image_labels[curr_image_idx - update_interval:curr_image_idx]
-            if not test_phase:
-                assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
-
-            predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
-            accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
-
-            accuracies.append(accuracy)
-            
-            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
-            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
-
-            draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"R{run_count}_I{curr_image_idx}_syn_input_weights")
-            # Reset spike_counts_per_image for new interval
-            spike_counts_per_image = []
 
         if  sum_spike_counts_current_image < 5:
             # Input frequency for current image is increased by 32 Hz if sum of 
@@ -307,30 +293,30 @@ for rc in range(run_count):
             max_rate_current_image += 32
             image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx], max_rate_current_image)
 
-            # Run simulation 150 ms without learning, before representing current image again.
-            image_input.rates = 0 * Hz
-            run(150 * ms)
         else:
+            spike_counts_per_image = acc_update_if_necessary(test_phase, curr_image_idx, acc_update_interval, image_labels, spike_counts_per_image, population_exc, accuracies, run_path)
+        
+            draw_update_if_necessary(curr_image_idx, draw_update_interval, spike_mon_ng_exc, poisson_spike_mon, syn_input_exc, 
+                                    population_exc, rf_size, run_count, run_path)
+ 
+            # add spike counts for current image
             spike_counts_per_image.append(spike_counts_current_image)
-
-            # Run simulation 150 ms without learning, before next image.
-            image_input.rates = 0 * Hz
-            run(150 * ms)
 
             # reset max_rate_current_image before presenting new image.
             max_rate_current_image = max_rate
 
             curr_image_idx += 1
+            
+        # Run simulation 150 ms without learning, before next image.
+        image_input.rates = 0 * Hz
+        run(150 * ms)
+
     print("----------------------------------")
     print(f"{rc + 1}. iteration over dataset is finished.")
     # Calculate accuracy after iteration over dataset is finished.
-    image_labels_curr_interval = image_labels[image_count - update_interval : image_count]
+    image_labels_curr_interval = image_labels[image_count - acc_update_interval : image_count]
 
-    if not test_phase:
-        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
-    predictions_per_image = get_predictions(spike_counts_per_image, f"{run_path}")
-    accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
-
+    accuracy = get_accuracy(test_phase, spike_counts_per_image, image_labels_curr_interval, population_exc, f"{run_path}")
     accuracies.append(accuracy)
 
     # Reset curr_image_idx and spike_counts_per_image before giving dataset again.
@@ -348,22 +334,8 @@ if not test_phase: # training phase
     theta_values = neuron_group_exc.theta[:]
     np.save(f'{run_path}/theta_values_exc.npy', theta_values)
 
-if test_phase:
-    run_label = "test"
-else:
-    run_label = "training"
-# iteration is x label of graph
-iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(update_interval, image_count+1, update_interval)]
-
-plt.figure(100)
-plt.plot(iteration, accuracies)
-plt.title(f'Accuracy change over iterations for {run_label} phase')
-plt.xlabel("Iteration Count")
-plt.ylabel("Accuracy % ")
-plt.grid(True)
-plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
-
-draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
+draw_accuracies(test_phase, run_count, image_count, acc_update_interval, accuracies, f"{run_path}")
+draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
 draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
 
 draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"final_syn_input_weights")

@@ -129,6 +129,28 @@ def draw_weights(synapse, population_exc, rf_size, path, img_name):
     plt.tight_layout()
     plt.savefig(f"{path}/{img_name}.png")
 
+def draw_accuracies(test_phase, run_count, image_count, acc_update_interval, accuracies, run_path):
+    if test_phase:
+        run_label = "test"
+    else:
+        run_label = "training"
+    # iteration is x label of graph
+    iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(acc_update_interval, image_count+1, acc_update_interval)]
+
+    plt.figure(100)
+    plt.plot(iteration, accuracies)
+    plt.title(f'Accuracy change over iterations for {run_label} phase')
+    plt.xlabel("Iteration Count")
+    plt.ylabel("Accuracy % ")
+    plt.grid(True)
+    plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
+
+def draw_update_if_necessary(curr_image_idx, draw_update_interval, spike_mon_ng_exc, poisson_spike_mon, syn_input_exc, population_exc, rf_size, run_count, run_path):
+    if curr_image_idx % draw_update_interval == 0 and curr_image_idx != 0:
+        draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
+        draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
+
+        draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"R{run_count}_I{curr_image_idx}_syn_input_weights")
 
 def get_args():
     parser = argparse.ArgumentParser(
@@ -180,8 +202,9 @@ def get_args():
     parser.add_argument('--test_phase', action='store_true', help="Set this flag to indicate test_phase")
     parser.add_argument('--run_count', type=int, default=1, help="How many times dataset will be iterated")
     parser.add_argument('--image_count', type=int, default=5000, help="How many images will be used for run")
-    parser.add_argument('--update_interval', type=int, default=500, help="Update interval for accuracy and heatmaps")
-#
+    parser.add_argument('--draw_update_interval', type=int, default=500, help="Update interval for heatmaps")
+    parser.add_argument('--acc_update_interval', type=int, default=500, help="Update interval for accuracy")
+
     return parser.parse_args()
 
 def write_to_csv(args, accuracy, run_name, sim_time, filename='runs.csv'):
