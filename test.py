@@ -19,6 +19,7 @@ from test_util import (
     synapse_connections_exc,
     synapse_connections_inh,
     draw_heatmap,
+    draw_weights,
     get_args,
     write_to_csv
     )
@@ -245,6 +246,8 @@ spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 full_spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 poisson_spike_mon = SpikeMonitor(image_input, record=True)
 
+syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=500*ms)
+
 # Getting spiking rates and labels according to run_mode
 image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate)
 
@@ -290,9 +293,10 @@ for rc in range(run_count):
 
             accuracies.append(accuracy)
             
-            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"heatmap_R{run_count}_I{curr_image_idx}_exc1")
-            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"heatmap_R{run_count}_I{curr_image_idx}_poisson")
+            draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
+            draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
 
+            draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"R{run_count}_I{curr_image_idx}_syn_input_weights")
             # Reset spike_counts_per_image for new interval
             spike_counts_per_image = []
 
@@ -334,7 +338,8 @@ for rc in range(run_count):
     spike_counts_per_image = []
 
 end = time.time()
-print(f"Simulation time: {end - start}")
+sim_time = end - start
+print(f"Simulation time: {sim_time}")
 
 if not test_phase: # training phase
     # Save weights and theta values.
@@ -358,7 +363,8 @@ plt.ylabel("Accuracy % ")
 plt.grid(True)
 plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
 
-draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", "heatmap_exc1")
-draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "heatmap_poisson")
+draw_heatmap(full_spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
+draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
 
-write_to_csv(args, accuracies[-1], run_name)
+draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"final_syn_input_weights")
+write_to_csv(args, accuracies[-1], run_name, sim_time)

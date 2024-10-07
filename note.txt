@@ -1,1 +1,1 @@
-simdeki run on_pre de w_ee *5
+update_intervallar draw and accuracy icin 2'ye ayrilmali

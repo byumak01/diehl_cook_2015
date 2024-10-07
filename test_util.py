@@ -110,6 +110,26 @@ def draw_heatmap(spike_counts, path, img_name):
     plt.savefig(f"{path}/{img_name}.png")
     #plt.show()
 
+def draw_weights(synapse, population_exc, rf_size, path, img_name):
+    pre_indices_for_all_post = [receptive_field_for_exc(neuron_idx, rf_size) for neuron_idx in range(population_exc)]
+    fig, axes = plt.subplots(28, 28, figsize=(40, 40))
+    for post_idx in range(population_exc):
+        pre_indices_for_current_post = pre_indices_for_all_post[post_idx]
+        weights = synapse.w_ee[pre_indices_for_current_post, post_idx]
+        
+        x = np.floor(np.sqrt(len(weights)))
+        y = np.ceil(np.sqrt(len(weights)))
+        weights = weights.reshape(int(x), int(y))
+        
+        row = post_idx // 28
+        col = post_idx % 28
+
+        axes[row, col].imshow(weights, vmin=0, vmax=1)
+        axes[row, col].axis('off')
+    plt.tight_layout()
+    plt.savefig(f"{path}/{img_name}.png")
+
+
 def get_args():
     parser = argparse.ArgumentParser(
             description="Neuron, Synapse, and PoissonGroup parameters",
@@ -164,13 +184,14 @@ def get_args():
 #
     return parser.parse_args()
 
-def write_to_csv(args, accuracy, run_name, filename='runs.csv'):
+def write_to_csv(args, accuracy, run_name, sim_time, filename='runs.csv'):
     # Get a dictionary of all arguments
     args_dict = vars(args)
 
     # Add the accuracy to the dictionary
     args_dict['accuracy'] = accuracy
     args_dict['run_name'] = run_name
+    args_dict['sim_time'] = sim_time
 
     # Check if the file exists to determine if we need to write the header
     file_exists = os.path.isfile(filename)
