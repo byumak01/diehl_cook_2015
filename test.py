@@ -59,6 +59,7 @@ run_count = args.run_count
 image_count = args.image_count
 acc_update_interval = args.acc_update_interval
 draw_update_interval = args.draw_update_interval
+normalization_const = args.normalization_const
 rf_size = args.rf_size
 # NeuronGroup Parameters:
 E_rest_exc = args.E_rest_exc * mV
@@ -275,7 +276,7 @@ for rc in range(run_count):
             print("----------------------------------")
         image_input.rates = image_input_rates[curr_image_idx] * Hz   # Setting poisson neuron rates for current input image.
 
-        #divisive_weight_normalization(syn_input_exc, population_exc) # Apply weight normalization
+        divisive_weight_normalization(syn_input_exc, population_exc, normalization_const) # Apply weight normalization
 
         run(350 * ms)  # training network for 350 ms.
 
