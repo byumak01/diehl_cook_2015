@@ -5,8 +5,9 @@ import time
 server = libtmux.Server()
 
 params = {}
-params["--normalization_const"] = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-params["--g_e_multiplier"] = [2.5, 3, 3.5, 4]
+params["--rf_size"] = [5, 7, 9, 11, 13, 15]
+params["--normalization_const"] = [7, 9, 13, 15]
+params["--g_e_multiplier"] = [3]
 params["--image_count"] = [10000]
 params["--acc_update_interval"] = [2500]
 params["--draw_update_interval"] = [500]
