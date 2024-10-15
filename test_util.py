@@ -110,17 +110,22 @@ def draw_heatmap(spike_counts, path, img_name):
     plt.savefig(f"{path}/{img_name}.png")
     #plt.show()
 
+def find_best_rectangle(n):
+    # Find divisors of n that are closest to forming a square-like rectangle
+    factors = [(i, n // i) for i in range(1, int(np.sqrt(n)) + 1) if n % i == 0]
+    return factors[-1]  # The pair of divisors that is closest to a square
+
 def draw_weights(synapse, population_exc, rf_size, path, img_name):
     pre_indices_for_all_post = [receptive_field_for_exc(neuron_idx, rf_size) for neuron_idx in range(population_exc)]
     fig, axes = plt.subplots(28, 28, figsize=(40, 40))
     for post_idx in range(population_exc):
         pre_indices_for_current_post = pre_indices_for_all_post[post_idx]
         weights = synapse.w_ee[pre_indices_for_current_post, post_idx]
-        
-        x = np.floor(np.sqrt(len(weights)))
-        y = np.ceil(np.sqrt(len(weights)))
-        weights = weights.reshape(int(x), int(y))
-        
+
+        # Get the best rectangle dimensions to reshape the weights
+        rows, cols = find_best_rectangle(len(weights))
+        weights = weights.reshape(rows, cols)
+
         row = post_idx // 28
         col = post_idx % 28
 
