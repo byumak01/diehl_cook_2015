@@ -5,12 +5,12 @@ import time
 server = libtmux.Server()
 
 params = {}
-params["--rf_size"] = [5, 7, 9, 11, 13, 15]
-params["--normalization_const"] = [7, 9, 13, 15]
+params["--rf_size"] = [21, 23, 25, 27]
+params["--normalization_const"] = [21]
 params["--g_e_multiplier"] = [3]
 params["--image_count"] = [10000]
 params["--acc_update_interval"] = [2500]
-params["--draw_update_interval"] = [500]
+params["--draw_update_interval"] = [2500]
 
 param_count = len(params)
 param_names = list(params.keys())
@@ -39,9 +39,9 @@ for run_id, param_values in enumerate(itertools.product(*ranges)):
     pane = window.panes[0]
     
     # Send commands to the new pane
-    pane.send_keys("brian2")
+    pane.send_keys("brian22")
     # pane.send_keys("source /home/bymk/Documents/tubitak/diehl_cook_2015/.venv_linux/bin/activate")
-    pane.send_keys(f"python test.py --seed_data {arguments}")
+    pane.send_keys(f"python3 test.py --seed_data {arguments}")
 
     print(f"Run {run_id} arguments: {arguments}")
     

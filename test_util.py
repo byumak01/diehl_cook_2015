@@ -151,9 +151,10 @@ def draw_accuracies(test_phase, run_count, image_count, acc_update_interval, acc
     plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
 
 def draw_update_if_necessary(curr_image_idx, draw_update_interval, spike_mon_ng_exc, poisson_spike_mon, syn_input_exc, population_exc, rf_size, run_count, run_path):
+    
     if curr_image_idx % draw_update_interval == 0 and curr_image_idx != 0:
-        draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
-        draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
+        # draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
+        # draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
 
         draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"R{run_count}_I{curr_image_idx}_syn_input_weights")
 

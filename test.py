@@ -248,10 +248,11 @@ syn_input_exc.delay = 10 * ms
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
-spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
-poisson_spike_mon = SpikeMonitor(image_input, record=True)
-
-syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=500*ms)
+# spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+# poisson_spike_mon = SpikeMonitor(image_input, record=True)
+spike_mon_ng_exc = 0
+poisson_spike_mon = 0
+syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500*500*ms)
 
 # Getting spiking rates and labels according to run_mode
 image_input_rates, image_labels = get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate)
@@ -336,8 +337,8 @@ if not test_phase: # training phase
     np.save(f'{run_path}/theta_values_exc.npy', theta_values)
 
 draw_accuracies(test_phase, run_count, image_count, acc_update_interval, accuracies, f"{run_path}")
-draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
-draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
+# draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
+# draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
 
 draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"final_syn_input_weights")
 write_to_csv(args, accuracies[-1], run_name, sim_time)
