@@ -9,6 +9,7 @@ weight_matrices
 changes.txt
 .venv_wsl
 .venv_linux
+.venv
 test
 output
 results

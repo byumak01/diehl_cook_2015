@@ -1,32 +1,36 @@
 from brian2 import *
+from datetime import datetime
 import numpy as np
 import struct, argparse, csv, os
 
-def get_spiking_rates_and_labels(test_phase, image_count, seed_data, max_rate, dataset_path: str = "mnist/"):
-    name = 't10k' if test_phase else 'train'
-    
-    # Load the images and labels
-    image_intensities = _load_images(dataset_path + f'{name}-images.idx3-ubyte')
-    image_intensities = _convert_indices_to_1d(image_intensities)
-    image_rates = _convert_to_spiking_rates(image_intensities, max_rate)
 
-    image_labels = _load_labels(dataset_path + f'{name}-labels.idx1-ubyte')
+def get_spiking_rates_and_labels(model, dataset_path: str = "mnist/"):
+    label = 't10k' if model.args.test_phase else 'train'
+
+    # Load the images and labels
+    image_intensities = _load_images(dataset_path + f'{label}-images.idx3-ubyte')
+    image_intensities = _convert_indices_to_1d(image_intensities)
+    image_rates = _convert_to_spiking_rates(image_intensities, model.args.max_rate)
+
+    image_labels = _load_labels(dataset_path + f'{label}-labels.idx1-ubyte')
 
     # Check if image_count is greater than the available images
     num_images = image_rates.shape[0]
-    if image_count > num_images:
-        raise ValueError(f"Requested image_count {image_count} exceeds the number of available images {num_images}.")
-    
+    if model.args.image_count > num_images:
+        raise ValueError(
+            f"Requested image_count {model.args.image_count} exceeds the number of available images {num_images}.")
+
     # Select random indices
-    if seed_data:
+    if model.args.seed_data:
         np.random.seed(42)
-    random_indices = np.random.choice(num_images, size=image_count, replace=False)
-    
+    random_indices = np.random.choice(num_images, size=model.args.image_count, replace=False)
+
     # Select the subset of images and labels
     image_rates_subset = image_rates[random_indices]
     image_labels_subset = image_labels[random_indices]
 
     return image_rates_subset, image_labels_subset
+
 
 def _load_images(filename: str):
     with open(filename, 'rb') as f:
@@ -34,25 +38,30 @@ def _load_images(filename: str):
         images = np.fromfile(f, dtype=np.uint8).reshape(num, rows, cols)
     return images
 
+
 def _load_labels(filename: str):
     with open(filename, 'rb') as f:
-        magic, num = struct.unpack(">II", f.read(8))
+        #magic, num = struct.unpack(">II", f.read(8))
         labels = np.fromfile(f, dtype=np.uint8)
     return labels
+
 
 # Normalizes pixel intensities between 0 and max_rate. Normalized value will
 # be spiking rate (Hz) of the cell.
 def _convert_to_spiking_rates(images, max_rate):
     return (images * max_rate) / 255
 
+
 # Converts indices spiking rates from 2d to 1d, so that it can be used in
 # PoissonGroup object.
 def _convert_indices_to_1d(images):
     return images.reshape(images.shape[0], -1)
 
+
 def increase_spiking_rates(image, current_max_rate):
     new_maximum_rate = current_max_rate + 32
     return (image * new_maximum_rate) / current_max_rate
+
 
 def divisive_weight_normalization(synapse: Synapses, population_exc: int, normalization_const: int) -> None:
     for post_idx in range(population_exc):
@@ -67,36 +76,42 @@ def divisive_weight_normalization(synapse: Synapses, population_exc: int, normal
 
         # Calculate normalization factor
         normalization_factor = normalization_const / sum_of_weights
-        
+
         # Update the weights in the Synapses object
         synapse.w_ee[target_indices] *= normalization_factor
 
+
 def receptive_field_for_exc(neuron_idx, rf_size):
     half_size = rf_size // 2
-    return [28 * j + i for i, j in [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1) 
-                                    for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1) 
-                                    if 0 <= i < 28 and 0 <= j < 28]]
+    return [28 * j + i for i, j in
+            [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1)
+             for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1)
+             if 0 <= i < 28 and 0 <= j < 28]]
 
 
 def receptive_field_for_inh(neuron_idx, rf_size):
     half_size = rf_size // 2
-    return [28 * j + i for i, j in [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1) 
-                                    for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1) 
-                                    if 0 <= i < 28 and 0 <= j < 28 and 28 * j + i != neuron_idx]]
+    return [28 * j + i for i, j in
+            [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1)
+             for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1)
+             if 0 <= i < 28 and 0 <= j < 28 and 28 * j + i != neuron_idx]]
+
 
 def synapse_connections_exc(neuron_population, rf_size):
     return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_exc(i, rf_size)])
 
+
 def synapse_connections_inh(neuron_population, rf_size):
     return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_inh(i, rf_size)])
 
-def draw_heatmap(spike_counts, path, img_name):
+
+def draw_heatmap(model, spike_counts, img_name):
     # Reshape the spike counts to a 28x28 grid
     spike_counts_grid = spike_counts.reshape(28, 28)
 
     plt.clf()
     # Plotting the spike counts in a grid
-    plt.figure(figsize=(12,12))
+    plt.figure(figsize=(12, 12))
     plt.imshow(spike_counts_grid, cmap='hot', interpolation='nearest')
     plt.colorbar(label='Spike Count')
     plt.title(f'{img_name}')
@@ -107,18 +122,21 @@ def draw_heatmap(spike_counts, path, img_name):
     for i in range(28):
         for j in range(28):
             plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
-    plt.savefig(f"{path}/{img_name}.png")
-    #plt.show()
+    plt.savefig(f"{model.run_path}/{img_name}.png")
+    # plt.show()
+
 
 def find_best_rectangle(n):
     # Find divisors of n that are closest to forming a square-like rectangle
     factors = [(i, n // i) for i in range(1, int(np.sqrt(n)) + 1) if n % i == 0]
     return factors[-1]  # The pair of divisors that is closest to a square
 
-def draw_weights(synapse, population_exc, rf_size, path, img_name):
-    pre_indices_for_all_post = [receptive_field_for_exc(neuron_idx, rf_size) for neuron_idx in range(population_exc)]
-    fig, axes = plt.subplots(28, 28, figsize=(40, 40))
-    for post_idx in range(population_exc):
+
+def draw_weights(model, synapse, img_name):
+    pre_indices_for_all_post = [receptive_field_for_exc(neuron_idx, model.args.rf_size) for neuron_idx in
+                                range(model.args.population_exc)]
+    fig, ax = plt.subplots(28, 28, figsize=(40, 40))
+    for post_idx in range(model.args.population_exc):
         pre_indices_for_current_post = pre_indices_for_all_post[post_idx]
         weights = synapse.w_ee[pre_indices_for_current_post, post_idx]
 
@@ -129,18 +147,20 @@ def draw_weights(synapse, population_exc, rf_size, path, img_name):
         row = post_idx // 28
         col = post_idx % 28
 
-        axes[row, col].imshow(weights, vmin=0, vmax=1)
-        axes[row, col].axis('off')
+        ax[row, col].imshow(weights, vmin=0, vmax=1)
+        ax[row, col].axis('off')
     plt.tight_layout()
-    plt.savefig(f"{path}/{img_name}.png")
+    plt.savefig(f"{model.run_path}/{img_name}.png")
 
-def draw_accuracies(test_phase, run_count, image_count, acc_update_interval, accuracies, run_path):
-    if test_phase:
+
+def draw_accuracies(model, accuracies):
+    if model.args.test_phase:
         run_label = "test"
     else:
         run_label = "training"
     # iteration is x label of graph
-    iteration = [rc * image_count + img_idx for rc in range(run_count) for img_idx in range(acc_update_interval, image_count+1, acc_update_interval)]
+    iteration = [run_cnt * model.argsimage_count + img_idx for run_cnt in range(model.args.run_count) for img_idx in
+                 range(model.args.acc_update_interval, model.args.image_count + 1, model.args.acc_update_interval)]
 
     plt.figure(100)
     plt.plot(iteration, accuracies)
@@ -148,30 +168,31 @@ def draw_accuracies(test_phase, run_count, image_count, acc_update_interval, acc
     plt.xlabel("Iteration Count")
     plt.ylabel("Accuracy % ")
     plt.grid(True)
-    plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
+    plt.savefig(f'{model.run_path}/{run_label}_accuracy_graph.png')
 
-def draw_update_if_necessary(curr_image_idx, draw_update_interval, spike_mon_ng_exc, poisson_spike_mon, syn_input_exc, population_exc, rf_size, run_count, run_path):
-    
-    if curr_image_idx % draw_update_interval == 0 and curr_image_idx != 0:
-        # draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
-        # draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
 
-        draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"R{run_count}_I{curr_image_idx}_syn_input_weights")
+def check_update(curr_image_idx, update_interval):
+    if curr_image_idx % update_interval == 0 and curr_image_idx != 0:
+        return True
+    else:
+        return False
+
 
 def get_args():
     parser = argparse.ArgumentParser(
-            description="Neuron, Synapse, and PoissonGroup parameters",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-
+        description="Neuron, Synapse, and PoissonGroup parameters",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     # Add NeuronGroup parameters
     parser.add_argument('--E_rest_exc', type=float, default=-65, help="Resting potential for excitatory neurons (mV)")
     parser.add_argument('--E_rest_inh', type=float, default=-60, help="Resting potential for inhibitory neurons (mV)")
     parser.add_argument('--E_exc_for_exc', type=float, default=0, help="Excitatory reversal potential (mV)")
     parser.add_argument('--E_inh_for_exc', type=float, default=-100, help="Inhibitory reversal potential (mV)")
-    parser.add_argument('--E_exc_for_inh', type=float, default=0, help="Excitatory reversal potential for inhibitory neurons (mV)")
-    parser.add_argument('--E_inh_for_inh', type=float, default=-85, help="Inhibitory reversal potential for inhibitory neurons (mV)")
+    parser.add_argument('--E_exc_for_inh', type=float, default=0,
+                        help="Excitatory reversal potential for inhibitory neurons (mV)")
+    parser.add_argument('--E_inh_for_inh', type=float, default=-85,
+                        help="Inhibitory reversal potential for inhibitory neurons (mV)")
     parser.add_argument('--tau_lif_exc', type=float, default=100, help="LIF decay for excitatory neurons (ms)")
     parser.add_argument('--tau_lif_inh', type=float, default=10, help="LIF decay for inhibitory neurons (ms)")
     parser.add_argument('--tau_ge', type=float, default=1, help="Excitatory conductance decay (ms)")
@@ -180,8 +201,10 @@ def get_args():
     parser.add_argument('--theta_inc_exc', type=float, default=0.05, help="Theta increment for excitatory neurons (mV)")
     parser.add_argument('--refractory_exc', type=float, default=5, help="Refractory period for excitatory neurons (ms)")
     parser.add_argument('--refractory_inh', type=float, default=2, help="Refractory period for inhibitory neurons (ms)")
-    parser.add_argument('--v_threshold_exc', type=float, default=-52, help="Spiking threshold for excitatory neurons (mV)")
-    parser.add_argument('--v_threshold_inh', type=float, default=-40, help="Spiking threshold for inhibitory neurons (mV)")
+    parser.add_argument('--v_threshold_exc', type=float, default=-52,
+                        help="Spiking threshold for excitatory neurons (mV)")
+    parser.add_argument('--v_threshold_inh', type=float, default=-40,
+                        help="Spiking threshold for inhibitory neurons (mV)")
     parser.add_argument('--v_offset_exc', type=float, default=20, help="Threshold offset for excitatory neurons (mV)")
     parser.add_argument('--v_reset_exc', type=float, default=-65, help="Reset voltage for excitatory neurons (mV)")
     parser.add_argument('--v_reset_inh', type=float, default=-45, help="Reset voltage for inhibitory neurons (mV)")
@@ -192,15 +215,19 @@ def get_args():
     parser.add_argument('--tau_Apre_ee', type=float, default=20, help="Apre decay for exc.->exc. synapse (ms)")
     parser.add_argument('--tau_Apost1_ee', type=float, default=20, help="Apost1 decay for exc.->exc. synapse (ms)")
     parser.add_argument('--tau_Apost2_ee', type=float, default=40, help="Apost2 decay for exc.->exc. synapse (ms)")
-    parser.add_argument('--eta_pre_ee', type=float, default=0.0001, help="Pre-synaptic learning rate for exc.->exc. synapse")
-    parser.add_argument('--eta_post_ee', type=float, default=0.01, help="Post-synaptic learning rate for exc.->exc. synapse")
+    parser.add_argument('--eta_pre_ee', type=float, default=0.0001,
+                        help="Pre-synaptic learning rate for exc.->exc. synapse")
+    parser.add_argument('--eta_post_ee', type=float, default=0.01,
+                        help="Post-synaptic learning rate for exc.->exc. synapse")
     parser.add_argument('--w_min_ee', type=float, default=0, help="Minimum weight for exc.->exc. synapse")
     parser.add_argument('--w_max_ee', type=float, default=1, help="Maximum weight for exc.->exc. synapse")
     parser.add_argument('--w_ei_', type=float, default=10.4, help="Weight for exc.->inh. synapse")
     parser.add_argument('--w_ie_', type=float, default=17, help="Weight for inh.->exc. synapse")
     parser.add_argument('--delay_ee', type=float, default=10, help="Delay for exc.->exc. synapse (ms)")
-    parser.add_argument('--g_e_multiplier', type=float, default=1, help="g_e_multiplier (on_pre -> g_e_post = w_ee * g_e_multiplier)")
-    parser.add_argument('--normalization_const', type=float, default=78, help="Normalization constant for div. w. norm.")
+    parser.add_argument('--g_e_multiplier', type=float, default=1,
+                        help="g_e_multiplier (on_pre -> g_e_post = w_ee * g_e_multiplier)")
+    parser.add_argument('--normalization_const', type=float, default=78,
+                        help="Normalization constant for div. w. norm.")
     # Add PoissonGroup parameters
     parser.add_argument('--max_rate', type=float, default=63.75, help="Maximum rate for PoissonGroup (Hz)")
     # Other params
@@ -211,16 +238,17 @@ def get_args():
     parser.add_argument('--image_count', type=int, default=5000, help="How many images will be used for run")
     parser.add_argument('--draw_update_interval', type=int, default=500, help="Update interval for heatmaps")
     parser.add_argument('--acc_update_interval', type=int, default=500, help="Update interval for accuracy")
+    parser.add_argument('--run_name', type=str, default=datetime.now().strftime("%m%d_%H%M%S"), help="run name")
 
     return parser.parse_args()
 
-def write_to_csv(args, accuracy, run_name, sim_time, filename='runs.csv'):
+
+def write_to_csv(args, accuracy, sim_time, filename='runs.csv'):
     # Get a dictionary of all arguments
     args_dict = vars(args)
 
     # Add the accuracy to the dictionary
     args_dict['accuracy'] = accuracy
-    args_dict['run_name'] = run_name
     args_dict['sim_time'] = sim_time
 
     # Check if the file exists to determine if we need to write the header
@@ -238,4 +266,3 @@ def write_to_csv(args, accuracy, run_name, sim_time, filename='runs.csv'):
         writer.writerow(args_dict.values())
 
     print(f"Parameters and accuracy appended to {filename}")
-

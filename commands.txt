@@ -1,3 +1,7 @@
+byumak@castXeon:~/Documents/diehl_cook_2015_main$ python sim.py --seed_data --update_interval 60000 --image_count 60000 --sum_check --run_name 2210-2134-default
+
+
+
 python test.py --seed_data --rf_size 5 --max_rate 63.75 --theta_inc_exc1 0.025 --theta_inc_exc2 0.025 
 python test.py --seed_data --rf_size 5 --max_rate 63.75 --theta_inc_exc1 0.025 --theta_inc_exc2 0.03 
 python test.py --seed_data --rf_size 5 --max_rate 63.75 --theta_inc_exc1 0.025 --theta_inc_exc2 0.035 
