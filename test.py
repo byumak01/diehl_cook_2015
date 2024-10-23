@@ -114,8 +114,7 @@ for rc in range(model.args.run_count):
         image_input.rates = image_input_rates[
                                 curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
 
-        divisive_weight_normalization(syn_input_exc, model.args.population_exc,
-                                      model.args.normalization_const)  # Apply weight normalization
+        divisive_weight_normalization(model, syn_input_exc)  # Apply weight normalization
 
         run(350 * ms)  # training network for 350 ms.
 

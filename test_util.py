@@ -63,8 +63,8 @@ def increase_spiking_rates(image, current_max_rate):
     return (image * new_maximum_rate) / current_max_rate
 
 
-def divisive_weight_normalization(synapse: Synapses, population_exc: int, normalization_const: int) -> None:
-    for post_idx in range(population_exc):
+def divisive_weight_normalization(model, synapse: Synapses) -> None:
+    for post_idx in range(model.args.population_exc):
         # Extract indices of synapses that connect to the current post-synaptic neuron
         target_indices = np.where(synapse.j == post_idx)[0]
 
@@ -75,7 +75,7 @@ def divisive_weight_normalization(synapse: Synapses, population_exc: int, normal
         sum_of_weights = np.sum(weights_to_same_post)
 
         # Calculate normalization factor
-        normalization_factor = normalization_const / sum_of_weights
+        normalization_factor = model.args.normalization_const / sum_of_weights
 
         # Update the weights in the Synapses object
         synapse.w_ee[target_indices] *= normalization_factor
