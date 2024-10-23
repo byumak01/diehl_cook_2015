@@ -24,7 +24,7 @@ from test_util import (
 )
 from test_evaluation import get_accuracy, acc_update
 from test_model import Model
-
+import os
 from brian2 import *
 
 model = Model()
@@ -40,9 +40,9 @@ start = time.time()
 
 # Creating NeuronGroup objects for exc. and inh. populations
 neuron_group_exc = NeuronGroup(N=model.args.population_exc, model=model.ng_eqs_exc, threshold=model.ng_threshold_exc,
-                               reset=model.ng_reset_exc, refractory=model.args.refractory_exc, method="euler")
+                               reset=model.ng_reset_exc, refractory=model.args.refractory_exc * ms, method="euler")
 neuron_group_inh = NeuronGroup(N=model.args.population_inh, model=model.ng_eqs_inh, threshold=model.ng_threshold_inh,
-                               reset=model.ng_reset_inh, refractory=model.args.refractory_inh, method="euler")
+                               reset=model.ng_reset_inh, refractory=model.args.refractory_inh * ms, method="euler")
 
 # Setting initial values for exc. and inh. populations
 model.set_ng_namespace(neuron_group_exc)
@@ -51,8 +51,8 @@ model.set_ng_namespace(neuron_group_inh)
 model.exc_ng_initial_vals(neuron_group_exc)
 model.inh_ng_initial_vals(neuron_group_inh)
 
-syn_con_exc = synapse_connections_exc(784, model.args.rf_size)
-syn_con_inh = synapse_connections_inh(784, model.args.rf_size)
+syn_con_exc = synapse_connections_exc(model)
+syn_con_inh = synapse_connections_inh(model)
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=model.ei_syn_eqs, on_pre=model.ei_syn_on_pre,

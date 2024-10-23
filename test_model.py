@@ -8,6 +8,7 @@ class Model:
         self.eqs = Equations()
         self.args = get_args()
         self.run_path = f"runs/{self.args.run_name}"
+        self.layout = int(sqrt(self.args.population_exc))
 
         self.ng_eqs_exc = self.eqs.ng_eqs_exc
         self.ng_eqs_inh = self.eqs.ng_eqs_inh
@@ -21,7 +22,7 @@ class Model:
         self.ei_syn_eqs = self.eqs.syn_eqs_ei
         self.ei_syn_on_pre = self.eqs.syn_on_pre_ei
         self.ie_syn_eqs = self.eqs.syn_eqs_ie
-        self.ie_syn_on_pre = self.eqs.syn_on_pre_ei
+        self.ie_syn_on_pre = self.eqs.syn_on_pre_ie
 
         self.update_equations()
 
@@ -44,16 +45,16 @@ class Model:
         else:
             ng_exc.theta = 20 * mV
 
-        ng_exc.v = self.args.E_rest_exc - 40 * mV
+        ng_exc.v = self.args.E_rest_exc * mV - 40 * mV
 
     def inh_ng_initial_vals(self, ng_inh):
-        ng_inh.v = self.args.E_rest_inh - 40 * mV
+        ng_inh.v = self.args.E_rest_inh * mV - 40 * mV
 
     def ei_syn_initial_vals(self, ei_syn):
         ei_syn.w_ei = self.args.w_ei_
 
     def ie_syn_initial_vals(self, ie_syn):
-        ie_syn.w_ei = self.args.w_ie_
+        ie_syn.w_ie = self.args.w_ie_
 
     def ee_syn_initial_vals(self, ee_syn):
         if self.args.test_phase:

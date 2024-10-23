@@ -41,7 +41,7 @@ def _load_images(filename: str):
 
 def _load_labels(filename: str):
     with open(filename, 'rb') as f:
-        #magic, num = struct.unpack(">II", f.read(8))
+        # magic, num = struct.unpack(">II", f.read(8))
         labels = np.fromfile(f, dtype=np.uint8)
     return labels
 
@@ -81,33 +81,32 @@ def divisive_weight_normalization(synapse: Synapses, population_exc: int, normal
         synapse.w_ee[target_indices] *= normalization_factor
 
 
-def receptive_field_for_exc(neuron_idx, rf_size):
-    half_size = rf_size // 2
-    return [28 * j + i for i, j in
-            [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1)
-             for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1)
-             if 0 <= i < 28 and 0 <= j < 28]]
+def receptive_field_for_exc(model, neuron_idx):
+    half_size = model.args.rf_size // 2
+    return [model.layout * j + i for j in
+            range((neuron_idx // model.layout) - half_size, (neuron_idx // model.layout) + half_size + 1) for
+            i in range((neuron_idx % model.layout) - half_size, (neuron_idx % model.layout) + half_size + 1)
+            if 0 <= i < model.layout and 0 <= j < model.layout]
 
 
-def receptive_field_for_inh(neuron_idx, rf_size):
-    half_size = rf_size // 2
-    return [28 * j + i for i, j in
-            [(i, j) for i in range((neuron_idx % 28) - half_size, (neuron_idx % 28) + half_size + 1)
-             for j in range((neuron_idx // 28) - half_size, (neuron_idx // 28) + half_size + 1)
-             if 0 <= i < 28 and 0 <= j < 28 and 28 * j + i != neuron_idx]]
+def receptive_field_for_inh(model, neuron_idx):
+    half_size = model.args.rf_size // 2
+    return [model.layout * j + i for j in
+            range((neuron_idx // model.layout) - half_size, (neuron_idx // model.layout) + half_size + 1) for
+            i in range((neuron_idx % model.layout) - half_size, (neuron_idx % model.layout) + half_size + 1)
+            if 0 <= i < model.layout and 0 <= j < model.layout and model.layout * j + i != neuron_idx]
 
 
-def synapse_connections_exc(neuron_population, rf_size):
-    return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_exc(i, rf_size)])
+def synapse_connections_exc(model):
+    return np.transpose([(x, i) for i in range(model.args.population_exc) for x in receptive_field_for_exc(model, i)])
 
 
-def synapse_connections_inh(neuron_population, rf_size):
-    return np.transpose([(x, i) for i in range(neuron_population) for x in receptive_field_for_inh(i, rf_size)])
+def synapse_connections_inh(model):
+    return np.transpose([(x, i) for i in range(model.args.population_inh) for x in receptive_field_for_inh(model, i)])
 
 
 def draw_heatmap(model, spike_counts, img_name):
-    # Reshape the spike counts to a 28x28 grid
-    spike_counts_grid = spike_counts.reshape(28, 28)
+    spike_counts_grid = spike_counts.reshape(model.layout, model.layout)
 
     plt.clf()
     # Plotting the spike counts in a grid
@@ -119,33 +118,23 @@ def draw_heatmap(model, spike_counts, img_name):
     plt.ylabel('Neuron Y')
 
     # Optional: annotate each square with the spike count
-    for i in range(28):
-        for j in range(28):
+    for i in range(model.layout):
+        for j in range(model.layout):
             plt.text(j, i, int(spike_counts_grid[i, j]), ha='center', va='center', color='white')
     plt.savefig(f"{model.run_path}/{img_name}.png")
     # plt.show()
 
 
-def find_best_rectangle(n):
-    # Find divisors of n that are closest to forming a square-like rectangle
-    factors = [(i, n // i) for i in range(1, int(np.sqrt(n)) + 1) if n % i == 0]
-    return factors[-1]  # The pair of divisors that is closest to a square
-
-
 def draw_weights(model, synapse, img_name):
-    pre_indices_for_all_post = [receptive_field_for_exc(neuron_idx, model.args.rf_size) for neuron_idx in
-                                range(model.args.population_exc)]
-    fig, ax = plt.subplots(28, 28, figsize=(40, 40))
+    fig, ax = plt.subplots(model.layout, model.layout, figsize=(40, 40))
+    dim = int(sqrt(model.args.population_exc))
     for post_idx in range(model.args.population_exc):
-        pre_indices_for_current_post = pre_indices_for_all_post[post_idx]
-        weights = synapse.w_ee[pre_indices_for_current_post, post_idx]
+        pre_indices_for_current_post = sort(receptive_field_for_exc(model, post_idx))
+        weights = np.zeros((dim, dim), dtype=float)
+        weights[pre_indices_for_current_post//28, pre_indices_for_current_post%28] = synapse.w_ee[pre_indices_for_current_post, post_idx]
 
-        # Get the best rectangle dimensions to reshape the weights
-        rows, cols = find_best_rectangle(len(weights))
-        weights = weights.reshape(rows, cols)
-
-        row = post_idx // 28
-        col = post_idx % 28
+        row = post_idx // model.layout
+        col = post_idx % model.layout
 
         ax[row, col].imshow(weights, vmin=0, vmax=1)
         ax[row, col].axis('off')
@@ -159,7 +148,7 @@ def draw_accuracies(model, accuracies):
     else:
         run_label = "training"
     # iteration is x label of graph
-    iteration = [run_cnt * model.argsimage_count + img_idx for run_cnt in range(model.args.run_count) for img_idx in
+    iteration = [run_cnt * model.args.image_count + img_idx for run_cnt in range(model.args.run_count) for img_idx in
                  range(model.args.acc_update_interval, model.args.image_count + 1, model.args.acc_update_interval)]
 
     plt.figure(100)
@@ -243,9 +232,9 @@ def get_args():
     return parser.parse_args()
 
 
-def write_to_csv(args, accuracy, sim_time, filename='runs.csv'):
+def write_to_csv(model, accuracy, sim_time, filename='runs.csv'):
     # Get a dictionary of all arguments
-    args_dict = vars(args)
+    args_dict = vars(model.args)
 
     # Add the accuracy to the dictionary
     args_dict['accuracy'] = accuracy
