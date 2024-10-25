@@ -111,8 +111,7 @@ for rc in range(model.args.run_count):
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
             print("----------------------------------")
-        image_input.rates = image_input_rates[
-                                curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
+        image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
 
         divisive_weight_normalization(model, syn_input_exc)  # Apply weight normalization
 
