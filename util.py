@@ -106,6 +106,11 @@ def synapse_connections_inh(model):
     return np.transpose([(x, i) for i in range(model.args.population_inh) for x in receptive_field_for_inh(model, i)])
 
 
+def package_syn_data(syn: Synapses):
+    package = {"w_ee": syn.w_ee[:], "i": syn.i[:], "j": syn.j[:]}
+    return package
+
+
 def check_update(curr_image_idx, update_interval):
     if curr_image_idx % update_interval == 0 and curr_image_idx != 0:
         return True

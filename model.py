@@ -7,6 +7,7 @@ class Model:
     def __init__(self):
         self.eqs = Equations()
         self.args = get_args()
+        self.mode = "test" if self.args.test_phase else "train"
         self.run_path = f"runs/{self.args.run_name}"
         self.spike_mon_dump_path = f"{self.run_path}/spike_mon_dump"
         self.weight_dump_path = f"{self.run_path}/weight_dump"

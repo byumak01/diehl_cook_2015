@@ -9,6 +9,8 @@ DOI: https://doi.org/10.3389/fncom.2015.00099
 Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/master
 
 Rewritten by: Barış Yumak, 2024
+
+python main.py --seed_data --image_count 50 --acc_update_interval 25 --draw_update_interval 25 --g_e_multiplier 3
 """
 from util import (
     get_spiking_rates_and_labels,
@@ -18,6 +20,7 @@ from util import (
     synapse_connections_inh,
     check_update,
     dump_data,
+    package_syn_data,
     write_to_csv,
     ensure_path
 )
@@ -78,16 +81,19 @@ image_input = PoissonGroup(N=784, rates=0 * Hz)  # rates are changed according t
 syn_input_exc = Synapses(image_input, neuron_group_exc, model=model.ee_syn_eqs, on_pre=model.ee_syn_on_pre,
                          on_post=model.ee_syn_on_post, method="euler")
 syn_input_exc.connect(i=syn_con_exc[0], j=syn_con_exc[1])
-# weight init function call
 
 model.set_syn_namespace(syn_input_exc)
 model.ee_syn_initial_vals(syn_input_exc)
+syn_input_exc_weight_dump_path = f"{model.weight_dump_path}/input_exc_{model.mode}"
 
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
 spk_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+spk_mon_ng_exc_dump_path = f"{model.spike_mon_dump_path}/{model.mode}/exc1"
+
 spk_mon_input = SpikeMonitor(image_input, record=True)
+spk_mon_input_dump_path = f"{model.spike_mon_dump_path}/{model.mode}/pg"
 # state_mon_syn_input_exc = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500 * 500 * ms)
 
 # Getting spiking rates and labels according to run_mode
@@ -140,10 +146,10 @@ for rc in range(model.args.run_count):
 
             is_dump_draw_data = check_update(curr_image_idx, model.args.draw_update_interval)
             if is_dump_draw_data:
-                dump_data(spk_mon_ng_exc.count[:], f"{model.spike_mon_dump_path}/exc1", f"R{rc}_I{curr_image_idx}_exc1")
-                dump_data(spk_mon_input.count[:], f"{model.spike_mon_dump_path}/pg", f"R{rc}_I{curr_image_idx}_pg")
-                dump_data(syn_input_exc.w_ee[:], f"{model.weight_dump_path}/input_exc",
-                          f"R{model.args.run_count}_I{curr_image_idx}_syn_input_exc")
+                dump_data(spk_mon_ng_exc.count[:], spk_mon_ng_exc_dump_path, f"R{rc}_I{curr_image_idx}_exc1")
+                dump_data(spk_mon_input.count[:], spk_mon_input_dump_path, f"R{rc}_I{curr_image_idx}_pg")
+                syn_input_exc_data = package_syn_data(syn_input_exc)
+                dump_data(syn_input_exc_data, syn_input_exc_weight_dump_path, f"R{rc}_I{curr_image_idx}_weight")
 
             # add spike counts for current image
             spike_counts_per_image.append(spike_counts_current_image)
@@ -181,10 +187,11 @@ if not model.args.test_phase:  # training phase
     theta_values = neuron_group_exc.theta[:]
     np.save(f'{model.run_path}/theta_values_exc.npy', theta_values)
 
-
-dump_data(accuracies, f"{model.acc_dump_path}", "accuracies")
-dump_data(spk_mon_ng_exc.count[:], f"{model.spike_mon_dump_path}/exc1", f"final_exc1")
-dump_data(spk_mon_input.count[:], f"{model.spike_mon_dump_path}/pg", f"final_pg")
-dump_data(syn_input_exc.w_ee[:], f"{model.weight_dump_path}/input_exc",f"final_syn_input_exc")
-dump_data(model, f"{model.model_dump_path}", f"model")
+dump_data(accuracies, f"{model.acc_dump_path}", f"accuracies_{model.mode}")
+dump_data(spk_mon_ng_exc.count[:], spk_mon_ng_exc_dump_path, f"final_exc1")
+dump_data(spk_mon_input.count[:], spk_mon_input_dump_path, f"final_pg")
+syn_input_exc_data = package_syn_data(syn_input_exc)
+dump_data(syn_input_exc_data, syn_input_exc_weight_dump_path, f"final_syn_input_exc")
+dump_data(model, f"{model.model_dump_path}", f"model_{model.mode}")
 write_to_csv(model, accuracies[-1], sim_time)
+
