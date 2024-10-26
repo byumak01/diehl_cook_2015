@@ -1,6 +1,6 @@
 from brian2 import *
-from test_equations import Equations
-from test_util import get_args
+from equations import Equations
+from util import get_args
 
 class Model:
 
@@ -8,6 +8,10 @@ class Model:
         self.eqs = Equations()
         self.args = get_args()
         self.run_path = f"runs/{self.args.run_name}"
+        self.spike_mon_dump_path = f"{self.run_path}/spike_mon_dump"
+        self.weight_dump_path = f"{self.run_path}/weight_dump"
+        self.acc_dump_path = f"{self.run_path}/acc_dump"
+        self.model_dump_path = f"{self.run_path}/model_dump"
         self.layout = int(sqrt(self.args.population_exc))
 
         self.ng_eqs_exc = self.eqs.ng_eqs_exc

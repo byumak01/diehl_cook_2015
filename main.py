@@ -10,30 +10,29 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 
 Rewritten by: Barış Yumak, 2024
 """
-from test_util import (
+from util import (
     get_spiking_rates_and_labels,
     increase_spiking_rates,
     divisive_weight_normalization,
     synapse_connections_exc,
     synapse_connections_inh,
     check_update,
-    draw_heatmap,
-    draw_weights,
-    draw_accuracies,
-    write_to_csv
+    dump_data,
+    write_to_csv,
+    ensure_path
 )
-from test_evaluation import get_accuracy, acc_update
-from test_model import Model
+from evaluation import get_accuracy, acc_update
+from model import Model
 import os
 from brian2 import *
 
 model = Model()
 
-if model.args.test_phase and (not os.path.exists(model.run_path) or not os.listdir(model.run_path)):
+if model.args.test_phase and not os.path.exists(model.run_path):
     raise ValueError(f"There isn't a run named {model.args.run_name} or folder is empty. Cannot run test phase.")
 
-if not model.args.test_phase and not os.path.exists(f"{model.run_path}"):
-    os.makedirs(model.run_path)
+if not model.args.test_phase:
+    ensure_path(model.run_path)
     print(f"Directory {model.run_path} created successfully.")
 
 start = time.time()
@@ -65,7 +64,8 @@ model.ei_syn_initial_vals(syn_exc_inh)
 # Creating Synapse object for inh. -> exc. connection
 syn_inh_exc = Synapses(neuron_group_inh, neuron_group_exc, model=model.ie_syn_eqs, on_pre=model.ie_syn_on_pre,
                        method="euler")
-syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0])  # inh. neurons connected to all exc. neurons expect the one which has the same index
+syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[
+    0])  # inh. neurons connected to all exc. neurons expect the one which has the same index
 
 model.set_syn_namespace(syn_inh_exc)
 model.ie_syn_initial_vals(syn_inh_exc)
@@ -86,9 +86,9 @@ model.ee_syn_initial_vals(syn_input_exc)
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
-# spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
-# poisson_spike_mon = SpikeMonitor(image_input, record=True)
-syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500 * 500 * ms)
+spk_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+spk_mon_input = SpikeMonitor(image_input, record=True)
+# state_mon_syn_input_exc = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500 * 500 * ms)
 
 # Getting spiking rates and labels according to run_mode
 image_input_rates, image_labels = get_spiking_rates_and_labels(model)
@@ -111,7 +111,8 @@ for rc in range(model.args.run_count):
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
             print("----------------------------------")
-        image_input.rates = image_input_rates[curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
+        image_input.rates = image_input_rates[
+                                curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
 
         divisive_weight_normalization(model, syn_input_exc)  # Apply weight normalization
 
@@ -132,15 +133,17 @@ for rc in range(model.args.run_count):
                                                                        max_rate_current_image)
 
         else:
-            accuracy_update = check_update(curr_image_idx, model.args.acc_update_interval)
-            if accuracy_update:
-                spike_counts_per_image = acc_update(model, curr_image_idx, image_labels, spike_counts_per_image, accuracies)
+            is_acc_update = check_update(curr_image_idx, model.args.acc_update_interval)
+            if is_acc_update:
+                spike_counts_per_image = acc_update(model, curr_image_idx, image_labels, spike_counts_per_image,
+                                                    accuracies)
 
-            draw_update = check_update(curr_image_idx, model.args.draw_update_interval)
-            if draw_update:
-                # draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_exc1_spike")
-                # draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", f"R{run_count}_I{curr_image_idx}_poisson_spike")
-                draw_weights(model, syn_input_exc, f"R{model.args.run_count}_I{curr_image_idx}_syn_input_weights")
+            is_dump_draw_data = check_update(curr_image_idx, model.args.draw_update_interval)
+            if is_dump_draw_data:
+                dump_data(spk_mon_ng_exc.count[:], f"{model.spike_mon_dump_path}/exc1", f"R{rc}_I{curr_image_idx}_exc1")
+                dump_data(spk_mon_input.count[:], f"{model.spike_mon_dump_path}/pg", f"R{rc}_I{curr_image_idx}_pg")
+                dump_data(syn_input_exc.w_ee[:], f"{model.weight_dump_path}/input_exc",
+                          f"R{model.args.run_count}_I{curr_image_idx}_syn_input_exc")
 
             # add spike counts for current image
             spike_counts_per_image.append(spike_counts_current_image)
@@ -157,7 +160,8 @@ for rc in range(model.args.run_count):
     print("----------------------------------")
     print(f"{rc + 1}. iteration over dataset is finished.")
     # Calculate accuracy after iteration over dataset is finished.
-    image_labels_curr_interval = image_labels[model.args.image_count - model.args.acc_update_interval: model.args.image_count]
+    image_labels_curr_interval = image_labels[
+                                 model.args.image_count - model.args.acc_update_interval: model.args.image_count]
 
     accuracy = get_accuracy(model, spike_counts_per_image, image_labels_curr_interval)
     accuracies.append(accuracy)
@@ -177,9 +181,10 @@ if not model.args.test_phase:  # training phase
     theta_values = neuron_group_exc.theta[:]
     np.save(f'{model.run_path}/theta_values_exc.npy', theta_values)
 
-draw_accuracies(model, accuracies)
-# draw_heatmap(model, spike_mon_ng_exc.count[:], "final_exc1_spikes")
-# draw_heatmap(model, poisson_spike_mon.count[:], "final_poisson_spikes")
 
-draw_weights(model, syn_input_exc, f"final_syn_input_weights")
+dump_data(accuracies, f"{model.acc_dump_path}", "accuracies")
+dump_data(spk_mon_ng_exc.count[:], f"{model.spike_mon_dump_path}/exc1", f"final_exc1")
+dump_data(spk_mon_input.count[:], f"{model.spike_mon_dump_path}/pg", f"final_pg")
+dump_data(syn_input_exc.w_ee[:], f"{model.weight_dump_path}/input_exc",f"final_syn_input_exc")
+dump_data(model, f"{model.model_dump_path}", f"model")
 write_to_csv(model, accuracies[-1], sim_time)
