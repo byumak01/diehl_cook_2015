@@ -42,12 +42,14 @@ from brian2 import *  # importing this before input() creates conflict.
 if not args.test_phase and os.path.exists(args.run_name):
     raise ValueError(f"Given run_name ({args.run_name}) is already used for another training, please try another name.")
 
-if args.test_phase and (not os.path.exists(args.run_name) or not os.listdir(args.run_name)):
+run_path = f"default_results/{args.run_name}"
+
+if args.test_phase and not os.path.exists(run_path):
     raise ValueError(f"There isn't a run named {args.run_name} or folder is empty. Cannot run test phase.")
 
-if not args.test_phase and not os.path.exists(args.run_name):
-    os.makedirs(args.run_name)
-    print(f"Directory '{args.run_name}' created successfully.")
+if not args.test_phase and not os.path.exists(run_path):
+    os.makedirs(f"default_results/{args.run_name}")
+    print(f"Directory 'default_results/{args.run_name}' created successfully.")
 
 start = time.time()
 
@@ -186,7 +188,7 @@ neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
 
 if args.test_phase:
-    theta_values = np.load(f"{args.run_name}/theta_values.npy")
+    theta_values = np.load(f"{run_path}/theta_values.npy")
     neuron_group_exc.theta = theta_values * volt
 else:  # training phase
     neuron_group_exc.theta = 20 * mV
@@ -214,7 +216,7 @@ if args.test_phase:
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test,
                              method="euler")
     syn_input_exc.connect()
-    weights = np.load(f'{args.run_name}/input_to_exc_trained_weights.npy')
+    weights = np.load(f'{run_path}/input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights  # Setting pre-trained weights
 else:  # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training,
@@ -242,7 +244,7 @@ spike_counts_per_image = []  # List to store the spike counts of each neuron for
 max_rate_current_image = max_rate
 
 for rc in range(args.run_count):
-    while (curr_image_idx < args.image_count):  # While loop which will continue until all training data is finished.
+    while curr_image_idx < args.image_count:  # While loop which will continue until all training data is finished.
         if curr_image_idx % 25 == 0:
             print("----------------------------------")
             print(f"Current image: {curr_image_idx}")
@@ -266,9 +268,9 @@ for rc in range(args.run_count):
             image_labels_curr_interval = image_labels[curr_image_idx - args.update_interval:curr_image_idx]
             if not args.test_phase:
                 assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc,
-                                         args.run_name)
+                                         run_path)
 
-            predictions_per_image = get_predictions(spike_counts_per_image, args.run_name)
+            predictions_per_image = get_predictions(spike_counts_per_image, run_path)
             accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
             accuracies.append(accuracy)
@@ -304,8 +306,8 @@ for rc in range(args.run_count):
     image_labels_curr_interval = image_labels[args.image_count - args.update_interval: args.image_count]
 
     if not args.test_phase:
-        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, args.run_name)
-    predictions_per_image = get_predictions(spike_counts_per_image, args.run_name)
+        assign_neurons_to_labels(spike_counts_per_image, image_labels_curr_interval, population_exc, run_path)
+    predictions_per_image = get_predictions(spike_counts_per_image, run_path)
     accuracy = calculate_accuracy(predictions_per_image, image_labels_curr_interval)
 
     accuracies.append(accuracy)
@@ -320,9 +322,9 @@ print(f"Simulation time: {end - start}")
 if not args.test_phase:  # training phase
     # Save weights and theta values.
     weights = syn_input_exc.w_ee[:]
-    np.save(f'{args.run_name}/input_to_exc_trained_weights.npy', weights)
+    np.save(f'{run_path}/input_to_exc_trained_weights.npy', weights)
     theta_values = neuron_group_exc.theta[:]
-    np.save(f'{args.run_name}/theta_values.npy', theta_values)
+    np.save(f'{run_path}/theta_values.npy', theta_values)
 
 if args.test_phase:
     run_label = "test"
@@ -337,4 +339,4 @@ plt.title(f'Accuracy change over iterations for {run_label} phase')
 plt.xlabel("Iteration Count")
 plt.ylabel("Accuracy % ")
 plt.grid(True)
-plt.savefig(f'{args.run_name}/{run_label}_accuracy_graph.png')
+plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
