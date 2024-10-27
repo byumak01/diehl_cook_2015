@@ -13,6 +13,8 @@ Rewritten by: Barış Yumak, 2024
 import time, os, argparse
 from dataset import get_spiking_rates_and_labels, increase_spiking_rates, divisive_weight_normalization
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
+from util import write_to_csv
+from datetime import datetime
 
 # TODO: Needs check conditions to see whether image size and spike per image list length are equal
 
@@ -22,7 +24,7 @@ parser = argparse.ArgumentParser(description="Script to run a simulation with us
 # Add arguments
 parser.add_argument('--test_phase', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--seed_data', action='store_true', help='Set this flag to indicate test phase')
-parser.add_argument('--run_name', type=str, default="result", help='Name of the directory/run')
+parser.add_argument('--run_name', type=str, default=datetime.now().strftime("%m%d_%H%M%S"), help="run name")
 parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
 parser.add_argument('--update_interval', type=int, default=1000, help='Interval for updates during the run')
 parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
@@ -340,3 +342,5 @@ plt.xlabel("Iteration Count")
 plt.ylabel("Accuracy % ")
 plt.grid(True)
 plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')
+
+write_to_csv(args, accuracies[-1], end - start)
