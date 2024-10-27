@@ -2,7 +2,6 @@ import argparse
 import pickle
 import numpy as np
 from brian2 import *
-from util import receptive_field_for_exc, ensure_path
 from pathlib import Path
 
 

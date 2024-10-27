@@ -1,6 +1,7 @@
 from brian2 import *
 from equations import Equations
-from util import get_args
+from util.parser_util import get_args
+from util.dump_util import load_data
 
 class Model:
 
@@ -11,6 +12,7 @@ class Model:
         self.run_path = f"runs/{self.args.run_name}"
         self.spike_mon_dump_path = f"{self.run_path}/spike_mon_dump"
         self.weight_dump_path = f"{self.run_path}/weight_dump"
+        self.theta_dump_path = f"{self.run_path}/theta_dump"
         self.acc_dump_path = f"{self.run_path}/acc_dump"
         self.model_dump_path = f"{self.run_path}/model_dump"
         self.layout = int(sqrt(self.args.population_exc))
@@ -37,15 +39,16 @@ class Model:
             self.ee_syn_eqs = self.eqs.syn_eqs_ee_test
             self.ee_syn_on_pre = self.eqs.syn_on_pre_ee_test
         else:
+            print("hello")
             self.ng_eqs_exc += "dtheta/dt = -theta/tau_theta  : volt"
-            self.ng_reset_exc = "theta += theta_inc_exc"
+            self.ng_reset_exc += "theta += theta_inc_exc"
             self.ee_syn_eqs = self.eqs.syn_eqs_ee_training
             self.ee_syn_on_pre = self.eqs.syn_on_pre_ee_training
             self.ee_syn_on_post= self.eqs.syn_on_post_ee_training
 
-    def exc_ng_initial_vals(self, ng_exc):
+    def exc_ng_initial_vals(self, ng_idx, ng_exc):
         if self.args.test_phase:
-            theta_values_exc = np.load(f"{self.run_path}/theta_values_exc.npy")
+            theta_values_exc = load_data(f"{self.theta_dump_path}/theta_ng{ng_idx}_train")
             ng_exc.theta = theta_values_exc * volt
         else:
             ng_exc.theta = 20 * mV
@@ -61,9 +64,9 @@ class Model:
     def ie_syn_initial_vals(self, ie_syn):
         ie_syn.w_ie = self.args.w_ie_
 
-    def ee_syn_initial_vals(self, ee_syn):
+    def ee_syn_initial_vals(self, syn_idx, ee_syn):
         if self.args.test_phase:
-            weights = np.load(f'{self.run_path}/input_to_exc_trained_weights.npy')
+            weights = load_data(f"{self.weight_dump_path}/ee_syn{syn_idx}_train/final_ee_syn{syn_idx}_train")
             ee_syn.w_ee[:] = weights  # Setting pre-trained weights
         else:
             ee_syn.w_ee[:] = "rand() * 0.3"  # Initializing weights
