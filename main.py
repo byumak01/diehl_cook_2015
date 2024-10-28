@@ -79,7 +79,7 @@ max_rate_current_image = model.args.max_rate
 
 for rc in range(model.args.run_count):
     while curr_image_idx < model.args.image_count:  # While loop which will continue until all training data is finished.
-        if curr_image_idx % 1 == 0:
+        if curr_image_idx % 50 == 0:
             print("----------------------------------")
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
