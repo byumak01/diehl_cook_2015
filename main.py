@@ -10,7 +10,7 @@ Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/mas
 
 Rewritten by: Barış Yumak, 2024
 
-python main.py --seed_data --image_count 50 --acc_update_interval 25 --draw_update_interval 25 --g_e_multiplier 3
+python main.py --seed_data --image_count 2500 --acc_update_interval 500 --draw_update_interval 500 --g_e_multiplier 3 --normalization_const 9 --rf_size 9
 """
 
 from util.dump_util import ensure_path, dump_data, dump_theta_values, write_to_csv, dump_weights
@@ -91,7 +91,7 @@ for rc in range(model.args.run_count):
 
         net.run(350 * ms)  # training network for 350 ms.
 
-        spike_counts_current_image = spk_mon_last_layer.count[:] - temp_spike_counts
+        spike_counts_current_image = np.copy(spk_mon_last_layer.count[:]) - temp_spike_counts
         temp_spike_counts = np.copy(spk_mon_last_layer.count[:])
 
 
