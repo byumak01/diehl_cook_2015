@@ -97,8 +97,18 @@ if __name__ == '__main__':
 
     mode = "test" if args.test_phase else "train"
 
-    model_path = f"runs/{args.run_name}/model_dump/model_{mode}"
+    ssh_run = True
+
+    if ssh_run:
+        model_path = f"ssh_runs/2024-10-29/runs/{args.run_name}/model_dump/model_{mode}" #ssh
+    else:
+        model_path = f"runs/{args.run_name}/model_dump/model_{mode}"
+
     model = load_data(model_path)
+
+    if ssh_run:
+        model.acc_dump_path = f"ssh_runs/2024-10-29/{model.acc_dump_path}"
+        model.run_path = f"ssh_runs/2024-10-29/{model.run_path}"
 
     acc_data_path = f"{model.acc_dump_path}/accuracies_{mode}"
     accuracies = load_data(acc_data_path)

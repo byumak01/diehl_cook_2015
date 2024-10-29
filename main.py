@@ -92,7 +92,7 @@ for rc in range(model.args.run_count):
         net.run(350 * ms)  # training network for 350 ms.
 
         spike_counts_current_image = spk_mon_last_layer.count[:] - temp_spike_counts
-        temp_spike_counts = spk_mon_last_layer.count[:]
+        temp_spike_counts = np.copy(spk_mon_last_layer.count[:])
 
 
         sum_spike_counts_current_image = sum(spike_counts_current_image)
