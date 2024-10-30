@@ -43,7 +43,6 @@ ei_synapses = create_synapses_ei(model, exc_neuron_groups, inh_neuron_groups)
 
 # Creating Synapse object for inh. -> exc. connection
 ie_synapses = create_synapses_ie(model, exc_neuron_groups, inh_neuron_groups)
-
 # Defining PoissonGroup for inputs
 image_input = PoissonGroup(N=784, rates=0 * Hz)  # rates are changed according to image later
 
@@ -53,6 +52,7 @@ ee_synapses = create_synapses_ee(model, image_input, exc_neuron_groups)
 
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spk_mon_last_layer = SpikeMonitor(exc_neuron_groups[-1], record=True)
+spk_mon_inh= SpikeMonitor(inh_neuron_groups[-1], record=True)
 spk_mon_last_layer_dump_path = f"{model.spike_mon_dump_path}/{model.mode}/last_layer"
 
 spk_mon_input = SpikeMonitor(image_input, record=True)
@@ -84,8 +84,8 @@ for rc in range(model.args.run_count):
             print(f"Current image: {curr_image_idx}")
             print(f"Elapsed time:", {time.time() - start})
             print("----------------------------------")
-        image_input.rates = image_input_rates[
-                                curr_image_idx] * Hz  # Setting poisson neuron rates for current input image.
+        # Setting poisson neuron rates for current input image.
+        image_input.rates = image_input_rates[curr_image_idx] * Hz
 
         normalize_synapses(model, ee_synapses)  # Apply weight normalization
 

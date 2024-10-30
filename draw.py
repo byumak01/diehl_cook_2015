@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     mode = "test" if args.test_phase else "train"
 
-    ssh_run = True
+    ssh_run = False
 
     ssh_date = "2024-10-29"
 

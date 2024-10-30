@@ -39,7 +39,6 @@ class Model:
             self.ee_syn_eqs = self.eqs.syn_eqs_ee_test
             self.ee_syn_on_pre = self.eqs.syn_on_pre_ee_test
         else:
-            print("hello")
             self.ng_eqs_exc += "dtheta/dt = -theta/tau_theta  : volt"
             self.ng_reset_exc += "theta += theta_inc_exc"
             self.ee_syn_eqs = self.eqs.syn_eqs_ee_training

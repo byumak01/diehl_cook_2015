@@ -38,7 +38,7 @@ def _load_images(filename: str):
 
 def _load_labels(filename: str):
     with open(filename, 'rb') as f:
-        # magic, num = struct.unpack(">II", f.read(8))
+        magic, num = struct.unpack(">II", f.read(8))
         labels = np.fromfile(f, dtype=np.uint8)
     return labels
 
