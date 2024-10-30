@@ -1,0 +1,2 @@
+test_phase,seed_data,run_name,image_count,update_interval,run_count,accuracy,sim_time
+False,True,1027_124331,60000,60000,3,71.59333333333333,194677.63046717644

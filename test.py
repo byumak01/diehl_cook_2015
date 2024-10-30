@@ -128,7 +128,7 @@ v = v_reset_exc
 """
 
 if not test_phase:
-    ng_reset_exc = "theta += theta_inc_exc"
+    ng_reset_exc += "theta += theta_inc_exc"
 
 ng_reset_inh = """
 v = v_reset_inh
@@ -184,6 +184,8 @@ g_i_post += w_ie
 """
 
 # Creating NeuronGroup objects for exc. and inh. populations
+print(f"ng_reset_exc\n {ng_reset_exc}")
+print(f"refractory\n {refractory_exc}")
 neuron_group_exc = NeuronGroup(N=population_exc, model=ng_eqs_exc, threshold=ng_threshold_exc, reset=ng_reset_exc, refractory=refractory_exc, method="euler")
 neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_threshold_inh, reset=ng_reset_inh, refractory=refractory_inh, method="euler")
 
@@ -248,10 +250,8 @@ syn_input_exc.delay = 10 * ms
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
 
-# spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
-# poisson_spike_mon = SpikeMonitor(image_input, record=True)
-spike_mon_ng_exc = 0
-poisson_spike_mon = 0
+spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
+poisson_spike_mon = SpikeMonitor(image_input, record=True)
 syn_input_exc_mon = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500*500*ms)
 
 # Getting spiking rates and labels according to run_mode
@@ -276,17 +276,19 @@ for rc in range(run_count):
             print(f"Elapsed time:", {time.time() - start})
             print("----------------------------------")
         image_input.rates = image_input_rates[curr_image_idx] * Hz   # Setting poisson neuron rates for current input image.
-
         divisive_weight_normalization(syn_input_exc, population_exc, normalization_const) # Apply weight normalization
-
         run(350 * ms)  # training network for 350 ms.
 
         spike_counts_current_image = spike_mon_ng_exc_temp.count[:]
+        #print("----------------------------------------------")
+        #print("curr_img_idx", curr_image_idx)
+        #print(poisson_spike_mon.count[:])
+        print(spike_counts_current_image)
         del spike_mon_ng_exc_temp
         spike_mon_ng_exc_temp = SpikeMonitor(neuron_group_exc, record=True)
-
+        
         sum_spike_counts_current_image = sum(spike_counts_current_image) # TODO: naming convention needs checking
-
+        #print(f"sum: {sum_spike_counts_current_image}")
 
         if  sum_spike_counts_current_image < 5:
             # Input frequency for current image is increased by 32 Hz if sum of 
@@ -303,7 +305,7 @@ for rc in range(run_count):
  
             # add spike counts for current image
             spike_counts_per_image.append(spike_counts_current_image)
-
+            # print(spike_counts_per_image[-1])
             # reset max_rate_current_image before presenting new image.
             max_rate_current_image = max_rate
 
@@ -337,8 +339,8 @@ if not test_phase: # training phase
     np.save(f'{run_path}/theta_values_exc.npy', theta_values)
 
 draw_accuracies(test_phase, run_count, image_count, acc_update_interval, accuracies, f"{run_path}")
-# draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
-# draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
+draw_heatmap(spike_mon_ng_exc.count[:], f"{run_path}", "final_exc1_spikes")
+draw_heatmap(poisson_spike_mon.count[:], f"{run_path}", "final_poisson_spikes")
 
 draw_weights(syn_input_exc, population_exc, rf_size, f"{run_path}", f"final_syn_input_weights")
 write_to_csv(args, accuracies[-1], run_name, sim_time)
