@@ -60,7 +60,7 @@ class Equations:
     """
 
     syn_on_pre_ee_test = """
-    g_e_post += w_ee
+    g_e_post += w_ee * g_e_multiplier
     """
 
     # Synapse equations for exc. -> inh. connections
