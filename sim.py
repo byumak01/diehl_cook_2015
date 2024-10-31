@@ -124,7 +124,7 @@ v = v_reset_exc
 """
 
 if not args.test_phase:
-    ng_reset_exc = "theta += theta_inc_exc"
+    ng_reset_exc += "theta += theta_inc_exc"
 
 ng_reset_inh = """
 v = v_reset_inh
