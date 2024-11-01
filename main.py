@@ -23,7 +23,7 @@ from util.syn_util import create_synapses_ee, create_synapses_ie, create_synapse
 from evaluation import get_accuracy, acc_update
 from model import Model
 from brian2 import *
-
+import os
 model = Model()
 
 if model.args.test_phase and not os.path.exists(model.run_path):
