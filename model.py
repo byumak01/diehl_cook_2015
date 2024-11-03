@@ -48,8 +48,8 @@ class Model:
 
     def exc_ng_initial_vals(self, ng_idx, ng_exc):
         if self.args.test_phase:
-            theta_values_exc = load_data(f"{self.theta_dump_path}/theta_ng{ng_idx}_train")
-            ng_exc.theta = theta_values_exc * volt
+            theta_values_exc = load_data(f"{self.theta_dump_path}/final_theta_ng{ng_idx}_train")
+            ng_exc.theta = theta_values_exc 
         else:
             ng_exc.theta = 20 * mV
 
@@ -67,7 +67,7 @@ class Model:
     def ee_syn_initial_vals(self, syn_idx, ee_syn):
         if self.args.test_phase:
             weights = load_data(f"{self.weight_dump_path}/ee_syn{syn_idx}_train/final_ee_syn{syn_idx}_train")
-            ee_syn.w_ee[:] = weights  # Setting pre-trained weights
+            ee_syn.w_ee[:] = weights['w_ee']  # Setting pre-trained weights
         else:
             ee_syn.w_ee[:] = "rand() * 0.3"  # Initializing weights
         ee_syn.delay = self.args.delay_ee * ms

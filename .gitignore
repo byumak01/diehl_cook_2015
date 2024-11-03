@@ -1,6 +1,8 @@
 .idea
 get_from_ssh.sh
 ssh_runs
+default_results
+default_results.csv
 runs.csv
 old_runs
 runs
