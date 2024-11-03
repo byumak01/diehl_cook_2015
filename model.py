@@ -1,6 +1,6 @@
 from brian2 import *
 from equations import Equations
-from util.parser_util import get_args
+from util.parser_util import get_args, check_args
 from util.dump_util import load_data
 
 class Model:
@@ -8,6 +8,7 @@ class Model:
     def __init__(self):
         self.eqs = Equations()
         self.args = get_args()
+        check_args(self.args)
         self.mode = "test" if self.args.test_phase else "train"
         self.run_path = f"runs/{self.args.run_name}"
         self.spike_mon_dump_path = f"{self.run_path}/spike_mon_dump"

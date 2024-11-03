@@ -97,9 +97,9 @@ if __name__ == '__main__':
 
     mode = "test" if args.test_phase else "train"
 
-    ssh_run = False
+    ssh_run = True
 
-    ssh_date = "2024-10-29"
+    ssh_date = "2024-10-31"
 
     if ssh_run:
         model_path = f"ssh_runs/{ssh_date}/runs/{args.run_name}/model_dump/model_{mode}" #ssh
