@@ -10,6 +10,16 @@ def str_to_int_list(val):
     return [int(item) for item in val.split(',')]
 
 
+def get_param(param, idx):
+    if isinstance(param, list):
+        if len(param) == 1:
+            return param[0]
+        else:
+            return param[idx]
+    else:
+        return param
+
+
 def check_args(args):
     args_dict = vars(args)
     for param_name, val in args_dict.items():
@@ -42,6 +52,7 @@ def get_args():
                         help="LIF decay for inhibitory neurons (ms)")
     parser.add_argument('--tau_ge', type=str_to_float_list, default=[1], help="Excitatory conductance decay (ms)")
     parser.add_argument('--tau_gi', type=str_to_float_list, default=[2], help="Inhibitory conductance decay (ms)")
+    parser.add_argument('--theta', type=str_to_float_list, default=[20], help="Initial theta value (mV)")
     parser.add_argument('--tau_theta', type=str_to_float_list, default=[1e7], help="Theta decay rate (ms)")
     parser.add_argument('--theta_inc_exc', type=str_to_float_list, default=[0.05],
                         help="Theta increment for excitatory neurons (mV)")

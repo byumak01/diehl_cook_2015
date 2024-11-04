@@ -1,7 +1,8 @@
 from brian2 import *
 from equations import Equations
-from util.parser_util import get_args, check_args
+from util.parser_util import get_args, check_args, get_param
 from util.dump_util import load_data
+
 
 class Model:
 
@@ -16,7 +17,6 @@ class Model:
         self.theta_dump_path = f"{self.run_path}/theta_dump"
         self.acc_dump_path = f"{self.run_path}/acc_dump"
         self.model_dump_path = f"{self.run_path}/model_dump"
-        self.layout = int(sqrt(self.args.population_exc))
 
         self.ng_eqs_exc = self.eqs.ng_eqs_exc
         self.ng_eqs_inh = self.eqs.ng_eqs_inh
@@ -44,25 +44,25 @@ class Model:
             self.ng_reset_exc += "theta += theta_inc_exc"
             self.ee_syn_eqs = self.eqs.syn_eqs_ee_training
             self.ee_syn_on_pre = self.eqs.syn_on_pre_ee_training
-            self.ee_syn_on_post= self.eqs.syn_on_post_ee_training
+            self.ee_syn_on_post = self.eqs.syn_on_post_ee_training
 
     def exc_ng_initial_vals(self, ng_idx, ng_exc):
         if self.args.test_phase:
             theta_values_exc = load_data(f"{self.theta_dump_path}/final_theta_ng{ng_idx}_train")
-            ng_exc.theta = theta_values_exc 
+            ng_exc.theta = theta_values_exc
         else:
-            ng_exc.theta = 20 * mV
+            ng_exc.theta = get_param(self.args.theta, ng_idx) * mV
 
-        ng_exc.v = self.args.E_rest_exc * mV - 40 * mV
+        ng_exc.v = get_param(self.args.E_rest_exc, ng_idx) * mV - 40 * mV
 
-    def inh_ng_initial_vals(self, ng_inh):
-        ng_inh.v = self.args.E_rest_inh * mV - 40 * mV
+    def inh_ng_initial_vals(self, idx: int, ng_inh):
+        ng_inh.v = get_param(self.args.E_rest_inh, idx) * mV - 40 * mV
 
-    def ei_syn_initial_vals(self, ei_syn):
-        ei_syn.w_ei = self.args.w_ei_
+    def ei_syn_initial_vals(self, idx: int, ei_syn):
+        ei_syn.w_ei = get_param(self.args.w_ei_, idx)
 
-    def ie_syn_initial_vals(self, ie_syn):
-        ie_syn.w_ie = self.args.w_ie_
+    def ie_syn_initial_vals(self, idx: int, ie_syn):
+        ie_syn.w_ie = get_param(self.args.w_ie_, idx)
 
     def ee_syn_initial_vals(self, syn_idx, ee_syn):
         if self.args.test_phase:
@@ -70,37 +70,37 @@ class Model:
             ee_syn.w_ee[:] = weights['w_ee']  # Setting pre-trained weights
         else:
             ee_syn.w_ee[:] = "rand() * 0.3"  # Initializing weights
-        ee_syn.delay = self.args.delay_ee * ms
+        ee_syn.delay = get_param(self.args.delay_ee, syn_idx) * ms
 
     # Set NeuronGroup Parameters:
-    def set_ng_namespace(self, ng: NeuronGroup):
-        ng.namespace["E_rest_exc"] = self.args.E_rest_exc * mV
-        ng.namespace["E_rest_inh"] = self.args.E_rest_inh * mV
-        ng.namespace["E_exc_for_exc"] = self.args.E_exc_for_exc * mV
-        ng.namespace["E_inh_for_exc"] = self.args.E_inh_for_exc * mV
-        ng.namespace["E_exc_for_inh"] = self.args.E_exc_for_inh * mV
-        ng.namespace["E_inh_for_inh"] = self.args.E_inh_for_inh * mV
-        ng.namespace["tau_lif_exc"] = self.args.tau_lif_exc * ms
-        ng.namespace["tau_lif_inh"] = self.args.tau_lif_inh * ms
-        ng.namespace["tau_ge"] = self.args.tau_ge * ms
-        ng.namespace["tau_gi"] = self.args.tau_gi * ms
-        ng.namespace["tau_theta"] = self.args.tau_theta * ms
-        ng.namespace["theta_inc_exc"] = self.args.theta_inc_exc * mV
-        ng.namespace["v_threshold_exc"] = self.args.v_threshold_exc * mV
-        ng.namespace["v_threshold_inh"] = self.args.v_threshold_inh * mV
-        ng.namespace["v_offset_exc"] = self.args.v_offset_exc * mV
-        ng.namespace["v_reset_exc"] = self.args.v_reset_exc * mV
-        ng.namespace["v_reset_inh"] = self.args.v_reset_inh * mV
+    def set_ng_namespace(self, idx: int, ng: NeuronGroup):
+        ng.namespace["E_rest_exc"] = get_param(self.args.E_rest_exc, idx) * mV
+        ng.namespace["E_rest_inh"] = get_param(self.args.E_rest_inh, idx) * mV
+        ng.namespace["E_exc_for_exc"] = get_param(self.args.E_exc_for_exc, idx) * mV
+        ng.namespace["E_inh_for_exc"] = get_param(self.args.E_inh_for_exc, idx) * mV
+        ng.namespace["E_exc_for_inh"] = get_param(self.args.E_exc_for_inh, idx) * mV
+        ng.namespace["E_inh_for_inh"] = get_param(self.args.E_inh_for_inh, idx) * mV
+        ng.namespace["tau_lif_exc"] = get_param(self.args.tau_lif_exc, idx) * ms
+        ng.namespace["tau_lif_inh"] = get_param(self.args.tau_lif_inh, idx) * ms
+        ng.namespace["tau_ge"] = get_param(self.args.tau_ge, idx) * ms
+        ng.namespace["tau_gi"] = get_param(self.args.tau_gi, idx) * ms
+        ng.namespace["tau_theta"] = get_param(self.args.tau_theta, idx) * ms
+        ng.namespace["theta_inc_exc"] = get_param(self.args.theta_inc_exc, idx) * mV
+        ng.namespace["v_threshold_exc"] = get_param(self.args.v_threshold_exc, idx) * mV
+        ng.namespace["v_threshold_inh"] = get_param(self.args.v_threshold_inh, idx) * mV
+        ng.namespace["v_offset_exc"] = get_param(self.args.v_offset_exc, idx) * mV
+        ng.namespace["v_reset_exc"] = get_param(self.args.v_reset_exc, idx) * mV
+        ng.namespace["v_reset_inh"] = get_param(self.args.v_reset_inh, idx) * mV
 
     # Set Synapse Parameters:
-    def set_syn_namespace(self, syn: Synapses):
-        syn.namespace["tau_Apre_ee"] = self.args.tau_Apre_ee * ms
-        syn.namespace["tau_Apost1_ee"] = self.args.tau_Apost1_ee * ms
-        syn.namespace["tau_Apost2_ee"] = self.args.tau_Apost2_ee * ms
-        syn.namespace["eta_pre_ee"] = self.args.eta_pre_ee
-        syn.namespace["eta_post_ee"] = self.args.eta_post_ee
-        syn.namespace["w_min_ee"] = self.args.w_min_ee
-        syn.namespace["w_max_ee"] = self.args.w_max_ee
-        syn.namespace["w_ei_"] = self.args.w_ei_
-        syn.namespace["w_ie_"] = self.args.w_ie_
-        syn.namespace["g_e_multiplier"] = self.args.g_e_multiplier
+    def set_syn_namespace(self, idx: int, syn: Synapses):
+        syn.namespace["tau_Apre_ee"] = get_param(self.args.tau_Apre_ee, idx) * ms
+        syn.namespace["tau_Apost1_ee"] = get_param(self.args.tau_Apost1_ee, idx) * ms
+        syn.namespace["tau_Apost2_ee"] = get_param(self.args.tau_Apost2_ee, idx) * ms
+        syn.namespace["eta_pre_ee"] = get_param(self.args.eta_pre_ee, idx)
+        syn.namespace["eta_post_ee"] = get_param(self.args.eta_post_ee, idx)
+        syn.namespace["w_min_ee"] = get_param(self.args.w_min_ee, idx)
+        syn.namespace["w_max_ee"] = get_param(self.args.w_max_ee, idx)
+        syn.namespace["w_ei_"] = get_param(self.args.w_ei_, idx)
+        syn.namespace["w_ie_"] = get_param(self.args.w_ie_, idx)
+        syn.namespace["g_e_multiplier"] = get_param(self.args.g_e_multiplier, idx)
