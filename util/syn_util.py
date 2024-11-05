@@ -1,7 +1,8 @@
 from brian2 import *
-
+import logging
 from util.parser_util import get_param
 
+syn_logger = logging.getLogger('base.syn_util')
 
 def normalize_synapses(model, synapses: list[Synapses]):
     for idx, syn in enumerate(synapses):

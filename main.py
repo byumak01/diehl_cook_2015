@@ -23,7 +23,16 @@ from util.syn_util import create_synapses_ee, create_synapses_ie, create_synapse
 from evaluation import get_accuracy, acc_update
 from model import Model
 from brian2 import *
+import logging
 import os
+
+logger = logging.getLogger('base')
+stream_handler = logging.StreamHandler()
+logger.addHandler(stream_handler)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+stream_handler.setFormatter(formatter)
+logger.setLevel(logging.DEBUG)
+
 model = Model()
 
 if model.args.test_phase and not os.path.exists(model.run_path):
@@ -37,27 +46,34 @@ start = time.time()
 
 # Creating NeuronGroup objects for exc. and inh. populations
 exc_neuron_groups, inh_neuron_groups = create_neuron_groups(model)
+logger.info("Neuron groups created.")
 
 # Creating Synapse object for exc. -> inh. connection
 ei_synapses = create_synapses_ei(model, exc_neuron_groups, inh_neuron_groups)
+logger.info("Synapses ei created.")
 
 # Creating Synapse object for inh. -> exc. connection
 ie_synapses = create_synapses_ie(model, exc_neuron_groups, inh_neuron_groups)
+logger.info("Synapses ie created.")
+
 # Defining PoissonGroup for inputs
 image_input = PoissonGroup(N=784, rates=0 * Hz)  # rates are changed according to image later
+logger.info("Poisson group for input created.")
 
 # Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use
 # equations for exc. -> exc. (ee)
 ee_synapses = create_synapses_ee(model, image_input, exc_neuron_groups)
+logger.info("Synapses ee created.")
 
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spk_mon_last_layer = SpikeMonitor(exc_neuron_groups[-1], record=True)
-spk_mon_inh= SpikeMonitor(inh_neuron_groups[-1], record=True)
 spk_mon_last_layer_dump_path = f"{model.spike_mon_dump_path}/{model.mode}/last_layer"
 
 spk_mon_input = SpikeMonitor(image_input, record=True)
 spk_mon_input_dump_path = f"{model.spike_mon_dump_path}/{model.mode}/pg"
 # state_mon_syn_input_exc = StateMonitor(syn_input_exc, ['w_ee'], record=True, dt=2500 * 500 * ms)
+
+logger.info("Spike and state monitors created.")
 
 # Getting spiking rates and labels according to run_mode
 image_input_rates, image_labels = get_spiking_rates_and_labels(model)
@@ -65,6 +81,7 @@ image_input_rates, image_labels = get_spiking_rates_and_labels(model)
 net = Network(collect())
 net.add(ee_synapses, ei_synapses, ie_synapses, exc_neuron_groups, inh_neuron_groups)
 net.run(0 * ms)
+logger.info("Network created.")
 
 curr_image_idx = 0  # Tracks the index of the current image during iteration.
 
@@ -74,16 +91,12 @@ temp_spike_counts = 0
 
 spike_counts_per_image = []  # List to store the spike counts of each neuron for each image.
 # First dimension represents image idx and second dimension shows spike counts.
-
 max_rate_current_image = model.args.max_rate
 
 for rc in range(model.args.run_count):
     while curr_image_idx < model.args.image_count:  # While loop which will continue until all training data is finished.
         if curr_image_idx % 50 == 0:
-            print("----------------------------------")
-            print(f"Current image: {curr_image_idx}")
-            print(f"Elapsed time:", {time.time() - start})
-            print("----------------------------------")
+            logger.info(f">>\nCurrent image = {curr_image_idx} \n Elapsed time = {time.time() - start}")
         # Setting poisson neuron rates for current input image.
         image_input.rates = image_input_rates[curr_image_idx] * Hz
 
@@ -93,7 +106,6 @@ for rc in range(model.args.run_count):
 
         spike_counts_current_image = np.copy(spk_mon_last_layer.count[:]) - temp_spike_counts
         temp_spike_counts = np.copy(spk_mon_last_layer.count[:])
-
 
         sum_spike_counts_current_image = sum(spike_counts_current_image)
 
@@ -141,8 +153,9 @@ for rc in range(model.args.run_count):
 
 end = time.time()
 sim_time = end - start
-print(f"Simulation time: {sim_time}")
+logger.info(f"Simulation is finished in {sim_time} seconds.")
 
+logger.info("Data dumping process...")
 if not model.args.test_phase:  # training phase
     dump_theta_values(model, exc_neuron_groups, "final")
     dump_weights(model, ee_synapses, "final")
@@ -152,3 +165,5 @@ dump_data(spk_mon_last_layer.count[:], spk_mon_last_layer_dump_path, f"final_exc
 dump_data(spk_mon_input.count[:], spk_mon_input_dump_path, f"final_pg")
 dump_data(model, f"{model.model_dump_path}", f"model_{model.mode}")
 write_to_csv(model, accuracies[-1], sim_time)
+
+logger.info("Data dumping process finished.")

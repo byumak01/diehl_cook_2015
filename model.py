@@ -2,6 +2,9 @@ from brian2 import *
 from equations import Equations
 from util.parser_util import get_args, check_args, get_param
 from util.dump_util import load_data
+import logging
+
+model_logger = logging.getLogger('base.model')
 
 
 class Model:
@@ -33,6 +36,19 @@ class Model:
         self.ie_syn_on_pre = self.eqs.syn_on_pre_ie
 
         self.update_equations()
+        model_logger.debug(f"\n ng_eqs_exc: {self.ng_eqs_exc}")
+        model_logger.debug(f"\n ng_eqs_inh: {self.ng_threshold_exc}")
+        model_logger.debug(f"\n ng_threshold_exc: {self.ng_threshold_exc}")
+        model_logger.debug(f"\n ng_threshold_inh: {self.ng_threshold_inh}")
+        model_logger.debug(f"\n ng_reset_exc: {self.ng_reset_exc}")
+        model_logger.debug(f"\n ng_reset_inh: {self.ng_reset_inh}")
+        model_logger.debug(f"\n ee_syn_eqs: {self.ee_syn_eqs}")
+        model_logger.debug(f"\n ee_syn_on_pre: {self.ee_syn_on_pre}")
+        model_logger.debug(f"\n ee_syn_on_post: {self.ee_syn_on_post}")
+        model_logger.debug(f"\n ie_syn_eqs: {self.ie_syn_eqs}")
+        model_logger.debug(f"\n ie_syn_on_pre: {self.ie_syn_on_pre}")
+        model_logger.debug(f"\n ei_syn_eqs: {self.ei_syn_eqs}")
+        model_logger.debug(f"\n ei_syn_on_pre: {self.ei_syn_on_pre}")
 
     def update_equations(self):
         if self.args.test_phase:
@@ -53,16 +69,22 @@ class Model:
         else:
             ng_exc.theta = get_param(self.args.theta, ng_idx) * mV
 
+        model_logger.debug(f"ng_exc.theta: {ng_exc.theta[0:10]}")
+
         ng_exc.v = get_param(self.args.E_rest_exc, ng_idx) * mV - 40 * mV
+        model_logger.debug(f"ng_exc.v: {ng_exc.v[0]}")
 
     def inh_ng_initial_vals(self, idx: int, ng_inh):
         ng_inh.v = get_param(self.args.E_rest_inh, idx) * mV - 40 * mV
+        model_logger.debug(f"ng_inh.v: {ng_inh.v[0]}")
 
     def ei_syn_initial_vals(self, idx: int, ei_syn):
         ei_syn.w_ei = get_param(self.args.w_ei_, idx)
+        model_logger.debug(f"ei_syn.w_ei: {ei_syn.w_ei[0]}")
 
     def ie_syn_initial_vals(self, idx: int, ie_syn):
         ie_syn.w_ie = get_param(self.args.w_ie_, idx)
+        model_logger.debug(f"ie_syn.w_ie: {ie_syn.w_ie[0]}")
 
     def ee_syn_initial_vals(self, syn_idx, ee_syn):
         if self.args.test_phase:
@@ -70,37 +92,69 @@ class Model:
             ee_syn.w_ee[:] = weights['w_ee']  # Setting pre-trained weights
         else:
             ee_syn.w_ee[:] = "rand() * 0.3"  # Initializing weights
+        model_logger.debug(f"ee_syn.w_ee: {ee_syn.w_ee[:10]}")
         ee_syn.delay = get_param(self.args.delay_ee, syn_idx) * ms
+        model_logger.debug(f"ee_syn.delay: {ee_syn.delay[0]}")
 
     # Set NeuronGroup Parameters:
     def set_ng_namespace(self, idx: int, ng: NeuronGroup):
+        model_logger.debug(f"ng_namespace, idx: {idx}")
         ng.namespace["E_rest_exc"] = get_param(self.args.E_rest_exc, idx) * mV
+        model_logger.debug(f"ng.E_rest_exc: {ng.namespace['E_rest_exc']}")
         ng.namespace["E_rest_inh"] = get_param(self.args.E_rest_inh, idx) * mV
+        model_logger.debug(f"ng.E_rest_inh: {ng.namespace['E_rest_inh']}")
         ng.namespace["E_exc_for_exc"] = get_param(self.args.E_exc_for_exc, idx) * mV
+        model_logger.debug(f"ng.E_exc_for_exc: {ng.namespace['E_exc_for_exc']}")
         ng.namespace["E_inh_for_exc"] = get_param(self.args.E_inh_for_exc, idx) * mV
+        model_logger.debug(f"ng.E_inh_for_exc: {ng.namespace['E_inh_for_exc']}")
         ng.namespace["E_exc_for_inh"] = get_param(self.args.E_exc_for_inh, idx) * mV
+        model_logger.debug(f"ng.E_exc_for_inh: {ng.namespace['E_exc_for_inh']}")
         ng.namespace["E_inh_for_inh"] = get_param(self.args.E_inh_for_inh, idx) * mV
+        model_logger.debug(f"ng.E_inh_for_inh: {ng.namespace['E_inh_for_inh']}")
         ng.namespace["tau_lif_exc"] = get_param(self.args.tau_lif_exc, idx) * ms
+        model_logger.debug(f"tau_lif_exc: {ng.namespace['tau_lif_exc']}")
         ng.namespace["tau_lif_inh"] = get_param(self.args.tau_lif_inh, idx) * ms
+        model_logger.debug(f"tau_lif_inh: {ng.namespace['tau_lif_inh']}")
         ng.namespace["tau_ge"] = get_param(self.args.tau_ge, idx) * ms
+        model_logger.debug(f"tau_ge: {ng.namespace['tau_ge']}")
         ng.namespace["tau_gi"] = get_param(self.args.tau_gi, idx) * ms
+        model_logger.debug(f"tau_gi: {ng.namespace['tau_gi']}")
         ng.namespace["tau_theta"] = get_param(self.args.tau_theta, idx) * ms
+        model_logger.debug(f"tau_theta: {ng.namespace['tau_theta']}")
         ng.namespace["theta_inc_exc"] = get_param(self.args.theta_inc_exc, idx) * mV
+        model_logger.debug(f"theta_inc_exc: {ng.namespace['theta_inc_exc']}")
         ng.namespace["v_threshold_exc"] = get_param(self.args.v_threshold_exc, idx) * mV
+        model_logger.debug(f"v_threshold_exc: {ng.namespace['v_threshold_exc']}")
         ng.namespace["v_threshold_inh"] = get_param(self.args.v_threshold_inh, idx) * mV
+        model_logger.debug(f"v_threshold_inh: {ng.namespace['v_threshold_inh']}")
         ng.namespace["v_offset_exc"] = get_param(self.args.v_offset_exc, idx) * mV
+        model_logger.debug(f"v_offset_exc: {ng.namespace['v_offset_exc']}")
         ng.namespace["v_reset_exc"] = get_param(self.args.v_reset_exc, idx) * mV
+        model_logger.debug(f"v_reset_exc: {ng.namespace['v_reset_exc']}")
         ng.namespace["v_reset_inh"] = get_param(self.args.v_reset_inh, idx) * mV
+        model_logger.debug(f"v_reset_inh: {ng.namespace['v_reset_inh']}")
 
     # Set Synapse Parameters:
     def set_syn_namespace(self, idx: int, syn: Synapses):
+        model_logger.debug(f"syn_namespace, idx: {idx}")
         syn.namespace["tau_Apre_ee"] = get_param(self.args.tau_Apre_ee, idx) * ms
+        model_logger.debug(f"tau_Apre_ee: {syn.namespace['tau_Apre_ee']}")
         syn.namespace["tau_Apost1_ee"] = get_param(self.args.tau_Apost1_ee, idx) * ms
+        model_logger.debug(f"tau_Apost1_ee: {syn.namespace['tau_Apost1_ee']}")
         syn.namespace["tau_Apost2_ee"] = get_param(self.args.tau_Apost2_ee, idx) * ms
+        model_logger.debug(f"tau_Apost2_ee: {syn.namespace['tau_Apost2_ee']}")
         syn.namespace["eta_pre_ee"] = get_param(self.args.eta_pre_ee, idx)
+        model_logger.debug(f"eta_pre_ee: {syn.namespace['eta_pre_ee']}")
         syn.namespace["eta_post_ee"] = get_param(self.args.eta_post_ee, idx)
+        model_logger.debug(f"eta_post_ee: {syn.namespace['eta_post_ee']}")
         syn.namespace["w_min_ee"] = get_param(self.args.w_min_ee, idx)
+        model_logger.debug(f"w_min_ee: {syn.namespace['w_min_ee']}")
         syn.namespace["w_max_ee"] = get_param(self.args.w_max_ee, idx)
+        model_logger.debug(f"w_max_ee: {syn.namespace['w_max_ee']}")
         syn.namespace["w_ei_"] = get_param(self.args.w_ei_, idx)
+        model_logger.debug(f"w_ei_: {syn.namespace['w_ei_']}")
         syn.namespace["w_ie_"] = get_param(self.args.w_ie_, idx)
+        model_logger.debug(f"w_ie_: {syn.namespace['w_ie_']}")
         syn.namespace["g_e_multiplier"] = get_param(self.args.g_e_multiplier, idx)
+        model_logger.debug(f"g_e_multiplier: {syn.namespace['g_e_multiplier']}")
+

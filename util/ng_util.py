@@ -1,7 +1,8 @@
 from brian2 import *
-
+import logging
 from util.parser_util import get_param
 
+ng_logger = logging.getLogger('base.ng_util')
 
 def create_neuron_groups(model):
     exc_neuron_groups = []
