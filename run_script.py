@@ -9,9 +9,9 @@ params["--rf_size"] = [[5, 5]]
 params["--normalization_const"] = [15]
 params["--layer_count"] = [2]
 params["--g_e_multiplier"] = [[3, 6]]
-params["--image_count"] = [10000]
-params["--acc_update_interval"] = [2500]
-params["--draw_update_interval"] = [2500]
+params["--image_count"] = [100]
+params["--acc_update_interval"] = [50]
+params["--draw_update_interval"] = [50]
 
 param_count = len(params)
 param_names = list(params.keys())

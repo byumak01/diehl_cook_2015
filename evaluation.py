@@ -26,8 +26,13 @@ def get_accuracy(model, spike_counts_per_image, image_labels):
 
 
 def _assign_neurons_to_labels(model, spike_counts_per_image: ty.List[ty.List[int]], image_labels: np.ndarray) -> None:
-    assigned_labels = np.ones(model.args.population_exc, dtype=int) * -1  # initialize them as not assigned
-    maximum_average_spike_counts = [0] * model.args.population_exc
+    if len(model.args.population_exc) == 1:
+        neuron_count = model.args.population_exc[0]
+    else:
+        neuron_count = model.args.population_exc[-1]
+
+    assigned_labels = np.ones(neuron_count, dtype=int) * -1  # initialize them as not assigned
+    maximum_average_spike_counts = [0] * neuron_count
 
     spike_counts_per_image = np.vstack(spike_counts_per_image)
 
@@ -40,7 +45,7 @@ def _assign_neurons_to_labels(model, spike_counts_per_image: ty.List[ty.List[int
             total_spike_counts = np.sum(spike_counts_per_image[image_labels == label], axis=0)
             # calculate average of total_spike_count_per_neuron by dividing it by image count with current label.
             average_spike_counts = total_spike_counts / current_label_count
-            for neuron_idx in range(model.args.population_exc):
+            for neuron_idx in range(neuron_count):
                 if average_spike_counts[neuron_idx] > maximum_average_spike_counts[neuron_idx]:
                     maximum_average_spike_counts[neuron_idx] = average_spike_counts[neuron_idx]
                     assigned_labels[neuron_idx] = label
