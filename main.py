@@ -138,8 +138,7 @@ for rc in range(model.args.run_count):
         image_input.rates = 0 * Hz
         net.run(150 * ms)
 
-    print("----------------------------------")
-    print(f"{rc + 1}. iteration over dataset is finished.")
+    logger.info(f"{rc + 1}. iteration over dataset is finished.")
     # Calculate accuracy after iteration over dataset is finished.
     image_labels_curr_interval = image_labels[
                                  model.args.image_count - model.args.acc_update_interval: model.args.image_count]

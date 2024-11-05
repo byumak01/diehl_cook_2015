@@ -5,10 +5,10 @@ import time
 server = libtmux.Server()
 
 params = {}
-params["--rf_size"] = [5]
+params["--rf_size"] = [[5, 5]]
 params["--normalization_const"] = [15]
 params["--layer_count"] = [2]
-params["--g_e_multiplier"] = [3]
+params["--g_e_multiplier"] = [[3, 6]]
 params["--image_count"] = [10000]
 params["--acc_update_interval"] = [2500]
 params["--draw_update_interval"] = [2500]
@@ -22,8 +22,14 @@ arguments = ""
 for run_id, param_values in enumerate(itertools.product(*ranges)):
     # Construct the argument string
     for i in range(param_count):
-        arguments += f" {param_names[i]} {param_values[i]}"
+        if isinstance(param_values[i], list):
+            arguments += f" {param_names[i]} {','.join(map(str, param_values[i]))}"
+        else:
+            arguments += f" {param_names[i]} {param_values[i]}"
 
+print(arguments)
+
+"""
     # Create a new session and capture the session ID
     session_id = server.cmd('new-session', '-d', '-P', '-F#{session_id}').stdout[0].strip()
     print(f"session id {session_id}")
@@ -51,3 +57,4 @@ for run_id, param_values in enumerate(itertools.product(*ranges)):
 
     # Sleep to avoid overloading the system with too many sessions at once
     time.sleep(2)
+"""
