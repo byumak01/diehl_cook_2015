@@ -98,7 +98,7 @@ class Model:
 
     # Set NeuronGroup Parameters:
     def set_ng_namespace(self, idx: int, ng: NeuronGroup):
-        model_logger.debug(f"ng_namespace, idx: {idx}")
+        model_logger.debug(f">>\n ng_namespace, idx: {idx}")
         ng.namespace["E_rest_exc"] = get_param(self.args.E_rest_exc, idx) * mV
         model_logger.debug(f"ng.E_rest_exc: {ng.namespace['E_rest_exc']}")
         ng.namespace["E_rest_inh"] = get_param(self.args.E_rest_inh, idx) * mV
@@ -133,10 +133,11 @@ class Model:
         model_logger.debug(f"v_reset_exc: {ng.namespace['v_reset_exc']}")
         ng.namespace["v_reset_inh"] = get_param(self.args.v_reset_inh, idx) * mV
         model_logger.debug(f"v_reset_inh: {ng.namespace['v_reset_inh']}")
+        model_logger.debug("<<")
 
     # Set Synapse Parameters:
     def set_syn_namespace(self, idx: int, syn: Synapses):
-        model_logger.debug(f"syn_namespace, idx: {idx}")
+        model_logger.debug(f">>\n syn_namespace, idx: {idx}")
         syn.namespace["tau_Apre_ee"] = get_param(self.args.tau_Apre_ee, idx) * ms
         model_logger.debug(f"tau_Apre_ee: {syn.namespace['tau_Apre_ee']}")
         syn.namespace["tau_Apost1_ee"] = get_param(self.args.tau_Apost1_ee, idx) * ms
@@ -157,4 +158,5 @@ class Model:
         model_logger.debug(f"w_ie_: {syn.namespace['w_ie_']}")
         syn.namespace["g_e_multiplier"] = get_param(self.args.g_e_multiplier, idx)
         model_logger.debug(f"g_e_multiplier: {syn.namespace['g_e_multiplier']}")
+        model_logger.debug("<<")
 

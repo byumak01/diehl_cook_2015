@@ -5,7 +5,7 @@ import time
 server = libtmux.Server()
 
 params = {}
-params["--rf_size"] = [[5, 5]]
+params["--rf_size"] = [[5, 9]]
 params["--normalization_const"] = [15]
 params["--layer_count"] = [2]
 params["--g_e_multiplier"] = [[3, 6]]

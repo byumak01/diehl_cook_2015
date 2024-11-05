@@ -76,6 +76,9 @@ def create_synapses_ie(model, exc_neuron_groups, inh_neuron_groups):
     ie_synapses = []
     for idx, (exc_neuron_group, inh_neuron_group) in enumerate(zip(exc_neuron_groups, inh_neuron_groups)):
         syn_con_inh = synapse_connections_inh(model, idx)
+        syn_logger.debug(f">> idx: {idx}, syn_ie")
+        syn_logger.debug(f"syn_con_inh pre: {syn_con_inh[1][:20]}")
+        syn_logger.debug(f"syn_con_inh post: {syn_con_inh[0][:20]}")
         syn_inh_exc = Synapses(inh_neuron_group, exc_neuron_group, model=model.ie_syn_eqs, on_pre=model.ie_syn_on_pre,
                                method="euler")
         syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0])
@@ -90,6 +93,9 @@ def create_synapses_ee(model, image_input, exc_neuron_groups):
     ee_synapses = []
     for group_idx in range(model.args.layer_count):
         syn_con_exc = synapse_connections_exc(model, group_idx)
+        syn_logger.debug(f">> idx: {group_idx}, syn_ee")
+        syn_logger.debug(f"syn_con_exc pre: {syn_con_exc[0][:20]}")
+        syn_logger.debug(f"syn_con_exc post: {syn_con_exc[1][:20]}")
         source = exc_neuron_groups[group_idx - 1] if group_idx != 0 else image_input
         target = exc_neuron_groups[group_idx] if group_idx != 0 else exc_neuron_groups[0]
         syn_ee = Synapses(source, target, model=model.ee_syn_eqs, on_pre=model.ee_syn_on_pre,
