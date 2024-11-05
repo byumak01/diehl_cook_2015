@@ -29,32 +29,30 @@ for run_id, param_values in enumerate(itertools.product(*ranges)):
 
 print(arguments)
 
-"""
-    # Create a new session and capture the session ID
-    session_id = server.cmd('new-session', '-d', '-P', '-F#{session_id}').stdout[0].strip()
-    print(f"session id {session_id}")
-    # Get the newly created session using the session ID, not run_id
-    session = server.find_where({"session_id": session_id})
-    if session is None:
-        print(f"Error: Session {session_id} not found.")
-        continue
+# Create a new session and capture the session ID
+session_id = server.cmd('new-session', '-d', '-P', '-F#{session_id}').stdout[0].strip()
+print(f"session id {session_id}")
+# Get the newly created session using the session ID, not run_id
+session = server.find_where({"session_id": session_id})
+if session is None:
+    print(f"Error: Session {session_id} not found.")
 
-    print(f"Created session: {session_id}, server.sessions: {server.sessions}")
 
-    # Access the window and pane in the new session
-    window = session.attached_window
-    pane = window.panes[0]
+print(f"Created session: {session_id}, server.sessions: {server.sessions}")
 
-    # Send commands to the new pane
-    pane.send_keys("brian2")
-    # pane.send_keys("source /home/bymk/Documents/tubitak/diehl_cook_2015/.venv_linux/bin/activate")
-    pane.send_keys(f"python main.py --seed_data {arguments}")
+# Access the window and pane in the new session
+window = session.attached_window
+pane = window.panes[0]
 
-    print(f"Run {run_id} arguments: {arguments}")
+# Send commands to the new pane
+pane.send_keys("brian2")
+# pane.send_keys("source /home/bymk/Documents/tubitak/diehl_cook_2015/.venv_linux/bin/activate")
+pane.send_keys(f"python main.py --seed_data {arguments}")
 
-    # Clear arguments for the next run
-    arguments = ""
+print(f"Run {run_id} arguments: {arguments}")
 
-    # Sleep to avoid overloading the system with too many sessions at once
-    time.sleep(2)
-"""
+# Clear arguments for the next run
+arguments = ""
+
+# Sleep to avoid overloading the system with too many sessions at once
+time.sleep(2)
