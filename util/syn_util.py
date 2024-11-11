@@ -82,6 +82,8 @@ def create_synapses_ie(model, exc_neuron_groups, inh_neuron_groups):
         syn_inh_exc = Synapses(inh_neuron_group, exc_neuron_group, model=model.ie_syn_eqs, on_pre=model.ie_syn_on_pre,
                                method="euler")
         syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0])
+        #syn_inh_exc.connect("i!=j")
+        syn_logger.debug(f"syn-inh-exc len {len(syn_inh_exc.i)}")
 
         model.set_syn_namespace(idx, syn_inh_exc)
         model.ie_syn_initial_vals(idx, syn_inh_exc)
