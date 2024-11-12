@@ -44,13 +44,13 @@ from brian2 import *  # importing this before input() creates conflict.
 if not args.test_phase and os.path.exists(args.run_name):
     raise ValueError(f"Given run_name ({args.run_name}) is already used for another training, please try another name.")
 
-run_path = f"default_results/{args.run_name}"
+run_path = f"../default_results/{args.run_name}"
 
 if args.test_phase and not os.path.exists(run_path):
     raise ValueError(f"There isn't a run named {args.run_name} or folder is empty. Cannot run test phase.")
 
 if not args.test_phase and not os.path.exists(run_path):
-    os.makedirs(f"default_results/{args.run_name}")
+    os.makedirs(f"{run_path}")
     print(f"Directory 'default_results/{args.run_name}' created successfully.")
 
 start = time.time()
@@ -337,8 +337,8 @@ iteration = [rc * args.image_count + img_idx for rc in range(args.run_count) for
              range(args.update_interval, args.image_count + 1, args.update_interval)]
 
 plt.plot(iteration, accuracies)
-plt.title(f'Accuracy change over iterations for {run_label} phase')
-plt.xlabel("Iteration Count")
+plt.title(f'Accuracy change over time for {run_label} phase')
+plt.xlabel("Image Count")
 plt.ylabel("Accuracy % ")
 plt.grid(True)
 plt.savefig(f'{run_path}/{run_label}_accuracy_graph.png')

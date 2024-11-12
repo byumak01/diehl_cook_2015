@@ -1,6 +1,6 @@
 import os, csv
 
-def write_to_csv(args, accuracy, sim_time, filename='default_runs.csv'):
+def write_to_csv(args, accuracy, sim_time, filename='../default_results/default_results.csv'):
     # Get a dictionary of all arguments
     args_dict = vars(args)
 
