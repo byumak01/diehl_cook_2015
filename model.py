@@ -14,7 +14,7 @@ class Model:
         self.args = get_args()
         check_args(self.args)
         self.mode = "test" if self.args.test_phase else "train"
-        self.run_path = f"runs/{self.args.run_name}"
+        self.run_path = f"../experimental_runs/{self.args.run_name}"
         self.spike_mon_dump_path = f"{self.run_path}/spike_mon_dump"
         self.weight_dump_path = f"{self.run_path}/weight_dump"
         self.theta_dump_path = f"{self.run_path}/theta_dump"

@@ -99,14 +99,14 @@ def get_args():
     parser.add_argument('--max_rate', type=float, default=63.75, help="Maximum rate for PoissonGroup (Hz)")
     # Other params
     parser.add_argument('--seed_data', action='store_true', help="Set this flag to seed the data")
-    parser.add_argument('--rf_size', type=str_to_int_list, default=[5], help="RF size of neurons")
+    parser.add_argument('--rf_size', type=str_to_int_list, default=[17], help="RF size of neurons")
     parser.add_argument('--test_phase', action='store_true', help="Set this flag to indicate test_phase")
     parser.add_argument('--run_count', type=int, default=1, help="How many times dataset will be iterated")
     parser.add_argument('--fire_condition', type=int, default=5, help="Fire condition for an image.")
     parser.add_argument('--layer_count', type=int, default=1, help="How many NG layers there should be")
-    parser.add_argument('--image_count', type=int, default=5000, help="How many images will be used for run")
-    parser.add_argument('--draw_update_interval', type=int, default=500, help="Update interval for heatmaps")
-    parser.add_argument('--acc_update_interval', type=int, default=500, help="Update interval for accuracy")
+    parser.add_argument('--image_count', type=int, default=50, help="How many images will be used for run")
+    parser.add_argument('--draw_update_interval', type=int, default=25, help="Update interval for heatmaps")
+    parser.add_argument('--acc_update_interval', type=int, default=25, help="Update interval for accuracy")
     parser.add_argument('--run_name', type=str, default=datetime.now().strftime("%m%d_%H%M%S"), help="run name")
 
     return parser.parse_args()

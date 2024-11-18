@@ -34,7 +34,7 @@ def dump_weights(model, synapses: list[Synapses], dump_time: str):
                   f"{dump_time}_ee_syn{idx}_{model.mode}")
 
 
-def write_to_csv(model, accuracy, sim_time, filename='runs.csv'):
+def write_to_csv(model, accuracy, sim_time, filename='../experimental_runs/experimental_runs.csv'):
     # Get a dictionary of all arguments
     args_dict = vars(model.args)
 
