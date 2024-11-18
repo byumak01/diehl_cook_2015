@@ -21,7 +21,7 @@ def _divisive_weight_normalization(model, synapse: Synapses, idx: int) -> None:
         sum_of_weights = np.sum(weights_to_same_post)
 
         # Calculate normalization factor
-        normalization_factor = get_param(model.args.normalization_const, idx) / sum_of_weights
+        normalization_factor = get_param(model.args.normalization_const, idx) / sum_of_weights if sum_of_weights != 0 else 0
 
         # Update the weights in the Synapses object
         synapse.w_ee[target_indices] *= normalization_factor

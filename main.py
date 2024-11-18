@@ -109,7 +109,7 @@ for rc in range(model.args.run_count):
 
         sum_spike_counts_current_image = sum(spike_counts_current_image)
 
-        if sum_spike_counts_current_image < 5:
+        if sum_spike_counts_current_image < model.args.fire_conditiotn:
             max_rate_current_image += 32
             image_input_rates[curr_image_idx] = increase_spiking_rates(image_input_rates[curr_image_idx],
                                                                        max_rate_current_image)
