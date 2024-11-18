@@ -77,14 +77,15 @@ def create_synapses_ie(model, exc_neuron_groups, inh_neuron_groups):
     for idx, (exc_neuron_group, inh_neuron_group) in enumerate(zip(exc_neuron_groups, inh_neuron_groups)):
         syn_con_inh = synapse_connections_inh(model, idx)
         syn_logger.debug(f">> idx: {idx}, syn_ie")
-        syn_logger.debug(f"syn_con_inh pre: {syn_con_inh[1][:20]}")
-        syn_logger.debug(f"syn_con_inh post: {syn_con_inh[0][:20]}")
         syn_inh_exc = Synapses(inh_neuron_group, exc_neuron_group, model=model.ie_syn_eqs, on_pre=model.ie_syn_on_pre,
                                method="euler")
-        syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0])
-        #syn_inh_exc.connect("i!=j")
+        if model.args.close_rf:
+            syn_inh_exc.connect("i!=j")
+        else:
+            syn_inh_exc.connect(i=syn_con_inh[1], j=syn_con_inh[0])
         syn_logger.debug(f"syn-inh-exc len {len(syn_inh_exc.i)}")
-
+        syn_logger.debug(f"syn inh exc pre: {syn_inh_exc.i[:20]}")
+        syn_logger.debug(f"syn inh exc post: {syn_inh_exc.j[:20]}")
         model.set_syn_namespace(idx, syn_inh_exc)
         model.ie_syn_initial_vals(idx, syn_inh_exc)
         ie_synapses.append(syn_inh_exc)
@@ -96,13 +97,16 @@ def create_synapses_ee(model, image_input, exc_neuron_groups):
     for group_idx in range(model.args.layer_count):
         syn_con_exc = synapse_connections_exc(model, group_idx)
         syn_logger.debug(f">> idx: {group_idx}, syn_ee")
-        syn_logger.debug(f"syn_con_exc pre: {syn_con_exc[0][:20]}")
-        syn_logger.debug(f"syn_con_exc post: {syn_con_exc[1][:20]}")
         source = exc_neuron_groups[group_idx - 1] if group_idx != 0 else image_input
         target = exc_neuron_groups[group_idx] if group_idx != 0 else exc_neuron_groups[0]
         syn_ee = Synapses(source, target, model=model.ee_syn_eqs, on_pre=model.ee_syn_on_pre,
                           on_post=model.ee_syn_on_post, method="euler")
-        syn_ee.connect(i=syn_con_exc[0], j=syn_con_exc[1])
+        if model.args.close_rf:
+            syn_ee.connect()
+        else:
+            syn_ee.connect(i=syn_con_exc[0], j=syn_con_exc[1])
+        syn_logger.debug(f"syn ee pre: {syn_ee.i[:20]}")
+        syn_logger.debug(f"syn ee post: {syn_ee.j[:20]}")
 
         model.set_syn_namespace(group_idx, syn_ee)
         model.ee_syn_initial_vals(group_idx, syn_ee)

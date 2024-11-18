@@ -101,6 +101,7 @@ def get_args():
     parser.add_argument('--seed_data', action='store_true', help="Set this flag to seed the data")
     parser.add_argument('--rf_size', type=str_to_int_list, default=[17], help="RF size of neurons")
     parser.add_argument('--test_phase', action='store_true', help="Set this flag to indicate test_phase")
+    parser.add_argument('--close_rf', action='store_true', help="Set this flag to close receptive field")
     parser.add_argument('--run_count', type=int, default=1, help="How many times dataset will be iterated")
     parser.add_argument('--fire_condition', type=int, default=5, help="Fire condition for an image.")
     parser.add_argument('--layer_count', type=int, default=1, help="How many NG layers there should be")
