@@ -2,21 +2,27 @@
 This script is a reproduction of the work presented in:
 
 Original Research Article:
-Peter U. Diehl, Matthew Cook, "Unsupervised learning of digit recognition using spike-timing-dependent plasticity," 
-Frontiers in Computational Neuroscience, vol. 9, 2015. 
+Peter U. Diehl, Matthew Cook, "Unsupervised learning of digit recognition using spike-timing-dependent plasticity,"
+Frontiers in Computational Neuroscience, vol. 9, 2015.
 DOI: https://doi.org/10.3389/fncom.2015.00099
 
 Original code available at: https://github.com/peter-u-diehl/stdp-mnist/tree/master
 
 Rewritten by: Barış Yumak, 2024
 """
-import time, os, argparse
+import argparse, os, time
+import logging
 from dataset import get_spiking_rates_and_labels, increase_spiking_rates, divisive_weight_normalization
 from evaluation import calculate_accuracy, get_predictions, assign_neurons_to_labels
 from util import write_to_csv
 from datetime import datetime
 
-# TODO: Needs check conditions to see whether image size and spike per image list length are equal
+logger = logging.getLogger('base')
+stream_handler = logging.StreamHandler()
+logger.addHandler(stream_handler)
+formatter = logging.Formatter(' %(levelname)s %(message)s')
+stream_handler.setFormatter(formatter)
+logger.setLevel(logging.DEBUG)
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Script to run a simulation with user inputs")
@@ -33,11 +39,11 @@ parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
 args = parser.parse_args()
 
 # Use the arguments
-print(f'Test phase: {args.test_phase}')
-print(f'Run name: {args.run_name}')
-print(f'Image count: {args.image_count}')
-print(f'Update interval: {args.update_interval}')
-print(f'Run count: {args.run_count}')
+logger.debug(f'Test phase: {args.test_phase}')
+logger.debug(f'Run name: {args.run_name}')
+logger.debug(f'Image count: {args.image_count}')
+logger.debug(f'Update interval: {args.update_interval}')
+logger.debug(f'Run count: {args.run_count}')
 
 from brian2 import *  # importing this before input() creates conflict.
 
@@ -79,7 +85,7 @@ v_reset_inh = -45 * mV  # membrane potential reset value after spiking for inhib
 population_exc = 400  # Excitatory neuron population
 population_inh = population_exc  # Inhibitory neuron population
 
-# Synapse Parameters:      
+# Synapse Parameters:
 tau_Apre_ee = 20 * ms  # Apre decay rate for synapse between two excitatory neurons
 tau_Apost1_ee = 20 * ms  # Apost1 decay rate for synapse between two excitatory neurons
 tau_Apost2_ee = 40 * ms  # Apost2 decay rate for synapse between two excitatory neurons
@@ -107,17 +113,20 @@ if args.test_phase:
     ng_eqs_exc += "theta : volt"
 else:
     ng_eqs_exc += "dtheta/dt = -theta/tau_theta  : volt"
+logger.debug(f"ng_eqs_exc: {ng_eqs_exc}")
 
 ng_eqs_inh = """
 dv/dt = ((E_rest_inh - v) + g_e*(E_exc_for_inh - v) + g_i*(E_inh_for_inh - v))/tau_lif_inh : volt (unless refractory)  # (Eq. 1 in the paper (inhibitory version))
 dg_e/dt = -g_e/tau_ge : 1                                                                                              # (Eq. 2 in the paper)
 dg_i/dt = -g_i/tau_gi : 1                                                                                              # (Eq. 2 in the paper (Inhibitory version))
 """
+logger.debug(f"ng_eqs_inh: {ng_eqs_inh}")
 
 # Defining threshold equations for exc. and inh. populations
 ng_threshold_exc = "v > v_threshold_exc - v_offset_exc + theta"
 ng_threshold_inh = "v > v_threshold_inh"
-
+logger.debug(f"ng_threshold_exc: {ng_threshold_exc}")
+logger.debug(f"ng_threshold_inh: {ng_threshold_inh}")
 # Defining reset equations for exc. and inh. populations
 ng_reset_exc = """
 v = v_reset_exc 
@@ -126,9 +135,12 @@ v = v_reset_exc
 if not args.test_phase:
     ng_reset_exc += "theta += theta_inc_exc"
 
+logger.debug(f"ng_reset_exc: {ng_reset_exc}")
+
 ng_reset_inh = """
 v = v_reset_inh
 """
+logger.debug(f"ng_reset_inh: {ng_reset_inh}")
 
 # Synapse equations for exc. -> exc. connections (training phase)
 syn_eqs_ee_training = """
@@ -165,19 +177,23 @@ g_e_post += w_ee
 syn_eqs_ei = """
 w_ei : 1
 """
+logger.debug(f"syn_eqs_ei: {syn_eqs_ei}")
 
 syn_on_pre_ei = """
 g_e_post += w_ei
 """
+logger.debug(f"syn_on_pre_ei: {syn_on_pre_ei}")
 
 # Synapse equations for inh. -> exc. connections
 syn_eqs_ie = """
 w_ie : 1
 """
+logger.debug(f"syn_eqs_ie: {syn_eqs_ie}")
 
 syn_on_pre_ie = """
 g_i_post += w_ie
 """
+logger.debug(f"syn_on_pre_ie: {syn_on_pre_ie}")
 
 # Creating NeuronGroup objects for exc. and inh. populations
 neuron_group_exc = NeuronGroup(N=population_exc, model=ng_eqs_exc, threshold=ng_threshold_exc, reset=ng_reset_exc,
@@ -188,31 +204,35 @@ neuron_group_inh = NeuronGroup(N=population_inh, model=ng_eqs_inh, threshold=ng_
 # Setting initial values for exc. and inh. populations
 neuron_group_exc.v = E_rest_exc - 40 * mV
 neuron_group_inh.v = E_rest_inh - 40 * mV
+logger.debug(f"neuron_group_exc.v: {neuron_group_exc.v[:20]}")
+logger.debug(f"neuron_group_inh.v: {neuron_group_inh.v[:20]}")
 
 if args.test_phase:
     theta_values = np.load(f"{run_path}/theta_values.npy")
     neuron_group_exc.theta = theta_values * volt
 else:  # training phase
     neuron_group_exc.theta = 20 * mV
+logger.debug(f"neuron_group_exc.theta: {neuron_group_exc.theta[:20]}")
 
 # Creating Synapse object for exc. -> inh. connection
 syn_exc_inh = Synapses(neuron_group_exc, neuron_group_inh, model=syn_eqs_ei, on_pre=syn_on_pre_ei, method="euler")
 syn_exc_inh.connect(j='i')  # One-to-one connection
-
 # Setting weight for exc. -> inh. synases
 syn_exc_inh.w_ei = w_ei_
+logger.debug(f"syn_exc_inh len: {len(syn_exc_inh)}")
+logger.debug(f"syn_exc_inh.w_ei: {syn_exc_inh.w_ei}")
 
 # Creating Synapse object for inh. -> exc. connection
 syn_inh_exc = Synapses(neuron_group_inh, neuron_group_exc, model=syn_eqs_ie, on_pre=syn_on_pre_ie, method="euler")
 syn_inh_exc.connect("i != j")  # inh. neurons connected to all exc. neurons expect the one which has the same index
-
 # Setting weight for inh. -> exc. synapses
 syn_inh_exc.w_ie = w_ie_
-
+logger.debug(f"syn_inh_exc len: {len(syn_inh_exc)}")
+logger.debug(f"syn_inh_exc.w_ie: {syn_inh_exc.w_ie[:20]}")
 # Defining PoissonGroup for inputs
 image_input = PoissonGroup(N=784, rates=0 * Hz)  # rates are changed according to image later
 
-# Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use 
+# Creating synapse object for input -> exc. connection, since inputs neurons are also excitatory we use
 # equations for exc. -> exc. (ee)
 if args.test_phase:
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_test, on_pre=syn_on_pre_ee_test,
@@ -220,14 +240,19 @@ if args.test_phase:
     syn_input_exc.connect()
     weights = np.load(f'{run_path}/input_to_exc_trained_weights.npy')
     syn_input_exc.w_ee[:] = weights  # Setting pre-trained weights
+    logger.debug(f"syn_eqs_ee_test: {syn_eqs_ee_test}")
+    logger.debug(f"syn_on_pre_ee_test: {syn_on_pre_ee_test}")
 else:  # training phase
     syn_input_exc = Synapses(image_input, neuron_group_exc, model=syn_eqs_ee_training, on_pre=syn_on_pre_ee_training,
                              on_post=syn_on_post_ee_training, method="euler")
     syn_input_exc.connect()
     syn_input_exc.w_ee[:] = "rand() * 0.3"  # Initializing weights
+    logger.debug(f"syn_eqs_ee_training: {syn_eqs_ee_training}")
+    logger.debug(f"syn_on_pre_ee_training: {syn_on_pre_ee_training}")
+    logger.debug(f"syn_on_post_ee_training: {syn_on_post_ee_training}")
 
 syn_input_exc.delay = 10 * ms
-
+logger.debug(f"syn_input_exc delay {syn_input_exc.delay[:20]}")
 # Defining SpikeMonitor to record spike counts of neuron in neuron_group_exc
 spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
@@ -281,7 +306,7 @@ for rc in range(args.run_count):
             spike_counts_per_image = []
 
         if sum_spike_counts_current_image < 5:
-            # Input frequency for current image is increased by 32 Hz if sum of 
+            # Input frequency for current image is increased by 32 Hz if sum of
             # spike counts of all neurons for current image is smaller than 5 and
             # training is repeated again.
             max_rate_current_image += 32
