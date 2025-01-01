@@ -31,8 +31,8 @@ parser = argparse.ArgumentParser(description="Script to run a simulation with us
 parser.add_argument('--test_phase', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--seed_data', action='store_true', help='Set this flag to indicate test phase')
 parser.add_argument('--run_name', type=str, default=datetime.now().strftime("%m%d_%H%M%S"), help="run name")
-parser.add_argument('--image_count', type=int, default=10000, help='Number of images to process')
-parser.add_argument('--update_interval', type=int, default=1000, help='Interval for updates during the run')
+parser.add_argument('--image_count', type=int, default=60000, help='Number of images to process')
+parser.add_argument('--update_interval', type=int, default=10000, help='Interval for updates during the run')
 parser.add_argument('--run_count', type=int, default=1, help='Number of runs')
 
 # Parse the arguments
@@ -281,13 +281,14 @@ for rc in range(args.run_count):
 
         divisive_weight_normalization(syn_input_exc, population_exc)  # Apply weight normalization
 
-        run(350 * ms)  # training network for 350 ms.
+        run(150 * ms)  # training network for 350 ms.
 
         spike_counts_current_image = spike_mon_ng_exc.count[:]
         del spike_mon_ng_exc
         spike_mon_ng_exc = SpikeMonitor(neuron_group_exc, record=True)
 
         sum_spike_counts_current_image = sum(spike_counts_current_image)
+        #print(f"spike counts current image {sum_spike_counts_current_image}")
 
         # Calculate accuracy during training at determined intervals:
         if not sum_spike_counts_current_image < 5 and curr_image_idx % args.update_interval == 0 and curr_image_idx != 0:
